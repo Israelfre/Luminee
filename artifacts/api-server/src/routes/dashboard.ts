@@ -1,0 +1,200 @@
+import { Router, Request, Response } from "express";
+import { db, appointmentsTable, paymentsTable, clientsTable, servicesTable, employeesTable } from "@workspace/db";
+import { eq, and, gte, lte, count, sum, sql } from "drizzle-orm";
+import { requireSalon } from "../middlewares/requireAuth";
+
+const router = Router();
+type AuthRequest = Request & { salonId: number };
+
+router.get("/summary", requireSalon, async (req: Request, res: Response) => {
+  const { salonId } = req as AuthRequest;
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const todayEnd = new Date(todayStart.getTime() + 86400000 - 1);
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+
+  const [todayAppts] = await db
+    .select({ count: count() })
+    .from(appointmentsTable)
+    .where(and(
+      eq(appointmentsTable.salonId, salonId),
+      gte(appointmentsTable.startsAt, todayStart),
+      lte(appointmentsTable.startsAt, todayEnd),
+    ));
+
+  const [completedToday] = await db
+    .select({ count: count() })
+    .from(appointmentsTable)
+    .where(and(
+      eq(appointmentsTable.salonId, salonId),
+      eq(appointmentsTable.status, "completed"),
+      gte(appointmentsTable.startsAt, todayStart),
+      lte(appointmentsTable.startsAt, todayEnd),
+    ));
+
+  const [cancelledToday] = await db
+    .select({ count: count() })
+    .from(appointmentsTable)
+    .where(and(
+      eq(appointmentsTable.salonId, salonId),
+      eq(appointmentsTable.status, "cancelled"),
+      gte(appointmentsTable.startsAt, todayStart),
+      lte(appointmentsTable.startsAt, todayEnd),
+    ));
+
+  const [todayRevRow] = await db
+    .select({ total: sum(paymentsTable.amount) })
+    .from(paymentsTable)
+    .where(and(
+      eq(paymentsTable.salonId, salonId),
+      gte(paymentsTable.paidAt, todayStart),
+      lte(paymentsTable.paidAt, todayEnd),
+    ));
+
+  const [monthRevRow] = await db
+    .select({ total: sum(paymentsTable.amount) })
+    .from(paymentsTable)
+    .where(and(
+      eq(paymentsTable.salonId, salonId),
+      gte(paymentsTable.paidAt, monthStart),
+      lte(paymentsTable.paidAt, monthEnd),
+    ));
+
+  const [newClientsRow] = await db
+    .select({ count: count() })
+    .from(clientsTable)
+    .where(and(
+      eq(clientsTable.salonId, salonId),
+      gte(clientsTable.createdAt, monthStart),
+      lte(clientsTable.createdAt, monthEnd),
+    ));
+
+  const [totalClientsRow] = await db
+    .select({ count: count() })
+    .from(clientsTable)
+    .where(eq(clientsTable.salonId, salonId));
+
+  const [totalEmployeesRow] = await db
+    .select({ count: count() })
+    .from(employeesTable)
+    .where(eq(employeesTable.salonId, salonId));
+
+  res.json({
+    todayAppointments: todayAppts.count,
+    todayRevenue: todayRevRow.total ?? "0",
+    monthRevenue: monthRevRow.total ?? "0",
+    newClientsThisMonth: newClientsRow.count,
+    completedToday: completedToday.count,
+    cancelledToday: cancelledToday.count,
+    totalClients: totalClientsRow.count,
+    totalEmployees: totalEmployeesRow.count,
+  });
+});
+
+router.get("/top-services", requireSalon, async (req: Request, res: Response) => {
+  const { salonId } = req as AuthRequest;
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  const rows = await db
+    .select({
+      serviceId: servicesTable.id,
+      serviceName: servicesTable.name,
+      count: count(appointmentsTable.id),
+      revenue: sum(paymentsTable.amount),
+    })
+    .from(appointmentsTable)
+    .innerJoin(servicesTable, eq(appointmentsTable.serviceId, servicesTable.id))
+    .leftJoin(paymentsTable, eq(paymentsTable.appointmentId, appointmentsTable.id))
+    .where(and(
+      eq(appointmentsTable.salonId, salonId),
+      gte(appointmentsTable.startsAt, monthStart),
+    ))
+    .groupBy(servicesTable.id, servicesTable.name)
+    .orderBy(sql`count(${appointmentsTable.id}) desc`)
+    .limit(5);
+
+  res.json(rows.map(r => ({ ...r, revenue: r.revenue ?? "0" })));
+});
+
+router.get("/revenue-trend", requireSalon, async (req: Request, res: Response) => {
+  const { salonId } = req as AuthRequest;
+  const days: { date: string; revenue: string; appointmentCount: number }[] = [];
+
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const dayEnd = new Date(dayStart.getTime() + 86400000 - 1);
+    const dateStr = dayStart.toISOString().split("T")[0];
+
+    const [revRow] = await db
+      .select({ total: sum(paymentsTable.amount) })
+      .from(paymentsTable)
+      .where(and(
+        eq(paymentsTable.salonId, salonId),
+        gte(paymentsTable.paidAt, dayStart),
+        lte(paymentsTable.paidAt, dayEnd),
+      ));
+
+    const [apptRow] = await db
+      .select({ count: count() })
+      .from(appointmentsTable)
+      .where(and(
+        eq(appointmentsTable.salonId, salonId),
+        gte(appointmentsTable.startsAt, dayStart),
+        lte(appointmentsTable.startsAt, dayEnd),
+      ));
+
+    days.push({ date: dateStr, revenue: revRow.total ?? "0", appointmentCount: apptRow.count });
+  }
+
+  res.json(days);
+});
+
+router.get("/upcoming-appointments", requireSalon, async (req: Request, res: Response) => {
+  const { salonId } = req as AuthRequest;
+  const now = new Date();
+  const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+
+  const rows = await db
+    .select({
+      id: appointmentsTable.id,
+      salonId: appointmentsTable.salonId,
+      clientId: appointmentsTable.clientId,
+      serviceId: appointmentsTable.serviceId,
+      employeeId: appointmentsTable.employeeId,
+      startsAt: appointmentsTable.startsAt,
+      endsAt: appointmentsTable.endsAt,
+      status: appointmentsTable.status,
+      notes: appointmentsTable.notes,
+      createdAt: appointmentsTable.createdAt,
+      clientName: clientsTable.name,
+      serviceName: servicesTable.name,
+      servicePrice: servicesTable.price,
+      employeeName: employeesTable.name,
+    })
+    .from(appointmentsTable)
+    .innerJoin(clientsTable, eq(appointmentsTable.clientId, clientsTable.id))
+    .innerJoin(servicesTable, eq(appointmentsTable.serviceId, servicesTable.id))
+    .innerJoin(employeesTable, eq(appointmentsTable.employeeId, employeesTable.id))
+    .where(and(
+      eq(appointmentsTable.salonId, salonId),
+      gte(appointmentsTable.startsAt, now),
+      lte(appointmentsTable.startsAt, todayEnd),
+      eq(appointmentsTable.status, "scheduled"),
+    ))
+    .orderBy(appointmentsTable.startsAt)
+    .limit(10);
+
+  res.json(rows.map(r => ({
+    ...r,
+    startsAt: r.startsAt.toISOString(),
+    endsAt: r.endsAt.toISOString(),
+    createdAt: r.createdAt.toISOString(),
+    servicePrice: r.servicePrice ?? "0",
+  })));
+});
+
+export default router;

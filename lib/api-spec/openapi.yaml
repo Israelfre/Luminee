@@ -1,0 +1,1089 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: Women's Beauty Salon Management SaaS API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: salons
+    description: Salon management
+  - name: clients
+    description: Client management
+  - name: services
+    description: Service catalog
+  - name: employees
+    description: Employee management
+  - name: appointments
+    description: Appointment scheduling
+  - name: payments
+    description: Payment tracking
+  - name: expenses
+    description: Expense tracking
+  - name: dashboard
+    description: Dashboard analytics
+
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  # ── Salon ──────────────────────────────────────────────────────────────────
+  /salons/me:
+    get:
+      operationId: getSalon
+      tags: [salons]
+      summary: Get current salon profile
+      responses:
+        "200":
+          description: Salon profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Salon"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateSalon
+      tags: [salons]
+      summary: Update salon profile and branding
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSalonBody"
+      responses:
+        "200":
+          description: Updated salon
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Salon"
+
+  /salons/register:
+    post:
+      operationId: registerSalon
+      tags: [salons]
+      summary: Register a new salon (onboarding)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterSalonBody"
+      responses:
+        "201":
+          description: Salon created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Salon"
+
+  # ── Clients ────────────────────────────────────────────────────────────────
+  /clients:
+    get:
+      operationId: listClients
+      tags: [clients]
+      summary: List all clients for the current salon
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of clients
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Client"
+    post:
+      operationId: createClient
+      tags: [clients]
+      summary: Create a new client
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateClientBody"
+      responses:
+        "201":
+          description: Client created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Client"
+
+  /clients/{id}:
+    get:
+      operationId: getClient
+      tags: [clients]
+      summary: Get a client by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Client
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Client"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateClient
+      tags: [clients]
+      summary: Update a client
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateClientBody"
+      responses:
+        "200":
+          description: Updated client
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Client"
+    delete:
+      operationId: deleteClient
+      tags: [clients]
+      summary: Delete a client
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /clients/{id}/appointments:
+    get:
+      operationId: getClientAppointments
+      tags: [clients]
+      summary: Get appointment history for a client
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Client appointments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AppointmentDetail"
+
+  # ── Services ───────────────────────────────────────────────────────────────
+  /services:
+    get:
+      operationId: listServices
+      tags: [services]
+      summary: List all services
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of services
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Service"
+    post:
+      operationId: createService
+      tags: [services]
+      summary: Create a service
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateServiceBody"
+      responses:
+        "201":
+          description: Service created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Service"
+
+  /services/{id}:
+    patch:
+      operationId: updateService
+      tags: [services]
+      summary: Update a service
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateServiceBody"
+      responses:
+        "200":
+          description: Updated service
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Service"
+    delete:
+      operationId: deleteService
+      tags: [services]
+      summary: Delete a service
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ── Employees ──────────────────────────────────────────────────────────────
+  /employees:
+    get:
+      operationId: listEmployees
+      tags: [employees]
+      summary: List all employees
+      responses:
+        "200":
+          description: List of employees
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Employee"
+    post:
+      operationId: createEmployee
+      tags: [employees]
+      summary: Create an employee
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateEmployeeBody"
+      responses:
+        "201":
+          description: Employee created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Employee"
+
+  /employees/{id}:
+    patch:
+      operationId: updateEmployee
+      tags: [employees]
+      summary: Update an employee
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateEmployeeBody"
+      responses:
+        "200":
+          description: Updated employee
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Employee"
+    delete:
+      operationId: deleteEmployee
+      tags: [employees]
+      summary: Delete an employee
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /employees/{id}/schedule:
+    get:
+      operationId: getEmployeeSchedule
+      tags: [employees]
+      summary: Get employee appointments for a date range
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            description: ISO date (YYYY-MM-DD)
+      responses:
+        "200":
+          description: Employee schedule
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AppointmentDetail"
+
+  # ── Appointments ───────────────────────────────────────────────────────────
+  /appointments:
+    get:
+      operationId: listAppointments
+      tags: [appointments]
+      summary: List appointments with optional date filter
+      parameters:
+        - name: date
+          in: query
+          schema:
+            type: string
+            description: ISO date (YYYY-MM-DD)
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [scheduled, confirmed, completed, cancelled]
+        - name: employeeId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of appointments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AppointmentDetail"
+    post:
+      operationId: createAppointment
+      tags: [appointments]
+      summary: Create an appointment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAppointmentBody"
+      responses:
+        "201":
+          description: Appointment created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppointmentDetail"
+
+  /appointments/{id}:
+    get:
+      operationId: getAppointment
+      tags: [appointments]
+      summary: Get appointment by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Appointment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppointmentDetail"
+    patch:
+      operationId: updateAppointment
+      tags: [appointments]
+      summary: Update appointment (status, reschedule, etc.)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateAppointmentBody"
+      responses:
+        "200":
+          description: Updated appointment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppointmentDetail"
+    delete:
+      operationId: deleteAppointment
+      tags: [appointments]
+      summary: Delete/cancel an appointment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ── Payments ───────────────────────────────────────────────────────────────
+  /payments:
+    get:
+      operationId: listPayments
+      tags: [payments]
+      summary: List payments with optional date filter
+      parameters:
+        - name: date
+          in: query
+          schema:
+            type: string
+        - name: month
+          in: query
+          schema:
+            type: string
+            description: YYYY-MM format
+      responses:
+        "200":
+          description: List of payments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PaymentDetail"
+    post:
+      operationId: createPayment
+      tags: [payments]
+      summary: Record a payment for a completed appointment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePaymentBody"
+      responses:
+        "201":
+          description: Payment created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentDetail"
+
+  # ── Expenses ───────────────────────────────────────────────────────────────
+  /expenses:
+    get:
+      operationId: listExpenses
+      tags: [expenses]
+      summary: List expenses with optional month filter
+      parameters:
+        - name: month
+          in: query
+          schema:
+            type: string
+            description: YYYY-MM format
+      responses:
+        "200":
+          description: List of expenses
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ExpenseDetail"
+    post:
+      operationId: createExpense
+      tags: [expenses]
+      summary: Record a new expense
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateExpenseBody"
+      responses:
+        "201":
+          description: Expense created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExpenseDetail"
+
+  /expenses/{id}:
+    delete:
+      operationId: deleteExpense
+      tags: [expenses]
+      summary: Delete an expense
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ── Dashboard ──────────────────────────────────────────────────────────────
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Get today's stats, monthly revenue, new clients
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
+  /dashboard/top-services:
+    get:
+      operationId: getTopServices
+      tags: [dashboard]
+      summary: Get top performed services this month
+      responses:
+        "200":
+          description: Top services
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TopService"
+
+  /dashboard/revenue-trend:
+    get:
+      operationId: getRevenueTrend
+      tags: [dashboard]
+      summary: Get last 7 days revenue trend
+      responses:
+        "200":
+          description: Revenue trend
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RevenueTrendDay"
+
+  /dashboard/upcoming-appointments:
+    get:
+      operationId: getUpcomingAppointments
+      tags: [dashboard]
+      summary: Get next upcoming appointments today
+      responses:
+        "200":
+          description: Upcoming appointments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AppointmentDetail"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required: [status]
+
+    # ── Salon ────────────────────────────────────────────────────────────────
+    Salon:
+      type: object
+      properties:
+        id:
+          type: integer
+        clerkUserId:
+          type: string
+        name:
+          type: string
+        logoUrl:
+          type: ["string", "null"]
+        address:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        instagram:
+          type: ["string", "null"]
+        whatsapp:
+          type: ["string", "null"]
+        primaryColor:
+          type: ["string", "null"]
+        secondaryColor:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required: [id, clerkUserId, name, createdAt]
+
+    RegisterSalonBody:
+      type: object
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        address:
+          type: string
+      required: [name]
+
+    UpdateSalonBody:
+      type: object
+      properties:
+        name:
+          type: string
+        logoUrl:
+          type: string
+        address:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        instagram:
+          type: string
+        whatsapp:
+          type: string
+        primaryColor:
+          type: string
+        secondaryColor:
+          type: string
+
+    # ── Client ───────────────────────────────────────────────────────────────
+    Client:
+      type: object
+      properties:
+        id:
+          type: integer
+        salonId:
+          type: integer
+        name:
+          type: string
+        phone:
+          type: ["string", "null"]
+        whatsapp:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required: [id, salonId, name, createdAt]
+
+    CreateClientBody:
+      type: object
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+        whatsapp:
+          type: string
+        email:
+          type: string
+        notes:
+          type: string
+      required: [name]
+
+    UpdateClientBody:
+      type: object
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+        whatsapp:
+          type: string
+        email:
+          type: string
+        notes:
+          type: string
+
+    # ── Service ──────────────────────────────────────────────────────────────
+    Service:
+      type: object
+      properties:
+        id:
+          type: integer
+        salonId:
+          type: integer
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        price:
+          type: string
+          description: Decimal as string
+        durationMinutes:
+          type: integer
+        category:
+          type: string
+        createdAt:
+          type: string
+      required: [id, salonId, name, price, durationMinutes, category, createdAt]
+
+    CreateServiceBody:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: string
+        durationMinutes:
+          type: integer
+        category:
+          type: string
+      required: [name, price, durationMinutes, category]
+
+    UpdateServiceBody:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: string
+        durationMinutes:
+          type: integer
+        category:
+          type: string
+
+    # ── Employee ─────────────────────────────────────────────────────────────
+    Employee:
+      type: object
+      properties:
+        id:
+          type: integer
+        salonId:
+          type: integer
+        name:
+          type: string
+        email:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        specialties:
+          type: array
+          items:
+            type: string
+        commissionPct:
+          type: ["number", "null"]
+        createdAt:
+          type: string
+      required: [id, salonId, name, specialties, createdAt]
+
+    CreateEmployeeBody:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        specialties:
+          type: array
+          items:
+            type: string
+        commissionPct:
+          type: number
+      required: [name]
+
+    UpdateEmployeeBody:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        specialties:
+          type: array
+          items:
+            type: string
+        commissionPct:
+          type: number
+
+    # ── Appointment ──────────────────────────────────────────────────────────
+    AppointmentDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        salonId:
+          type: integer
+        clientId:
+          type: integer
+        serviceId:
+          type: integer
+        employeeId:
+          type: integer
+        startsAt:
+          type: string
+        endsAt:
+          type: string
+        status:
+          type: string
+          enum: [scheduled, confirmed, completed, cancelled]
+        notes:
+          type: ["string", "null"]
+        clientName:
+          type: string
+        clientWhatsapp:
+          type: ["string", "null"]
+        clientPhone:
+          type: ["string", "null"]
+        serviceName:
+          type: string
+        servicePrice:
+          type: string
+        employeeName:
+          type: string
+        createdAt:
+          type: string
+        paymentStatus:
+          type: string
+          enum: [not_due, pending, paid]
+        paymentMethod:
+          type: ["string", "null"]
+          enum: [cash, pix, credit, debit, transfer, null]
+        paymentAmount:
+          type: ["string", "null"]
+      required: [id, salonId, clientId, serviceId, employeeId, startsAt, endsAt, status, clientName, serviceName, servicePrice, employeeName, createdAt, paymentStatus]
+
+    CreateAppointmentBody:
+      type: object
+      properties:
+        clientId:
+          type: integer
+        serviceId:
+          type: integer
+        employeeId:
+          type: integer
+        startsAt:
+          type: string
+        notes:
+          type: string
+      required: [clientId, serviceId, employeeId, startsAt]
+
+    UpdateAppointmentBody:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [scheduled, confirmed, completed, cancelled]
+        startsAt:
+          type: string
+        endsAt:
+          type: string
+        notes:
+          type: string
+        employeeId:
+          type: integer
+        serviceId:
+          type: integer
+        paymentStatus:
+          type: string
+          enum: [not_due, pending, paid]
+        paymentMethod:
+          type: string
+          enum: [cash, pix, credit, debit, transfer]
+        paymentAmount:
+          type: string
+
+    # ── Payment ──────────────────────────────────────────────────────────────
+    PaymentDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        salonId:
+          type: integer
+        appointmentId:
+          type: integer
+        amount:
+          type: string
+        paymentMethod:
+          type: string
+          enum: [cash, pix, card]
+        paidAt:
+          type: string
+        clientName:
+          type: string
+        serviceName:
+          type: string
+        employeeName:
+          type: string
+      required: [id, salonId, appointmentId, amount, paymentMethod, paidAt, clientName, serviceName, employeeName]
+
+    CreatePaymentBody:
+      type: object
+      properties:
+        appointmentId:
+          type: integer
+        amount:
+          type: string
+        paymentMethod:
+          type: string
+          enum: [cash, pix, card]
+      required: [appointmentId, amount, paymentMethod]
+
+    # ── Expense ──────────────────────────────────────────────────────────────
+    ExpenseDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        salonId:
+          type: integer
+        description:
+          type: string
+        amount:
+          type: string
+        category:
+          type: string
+          enum: [supplies, rent, utilities, salaries, marketing, equipment, other]
+        paidAt:
+          type: string
+        notes:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+      required: [id, salonId, description, amount, category, paidAt, createdAt]
+
+    CreateExpenseBody:
+      type: object
+      properties:
+        description:
+          type: string
+        amount:
+          type: string
+        category:
+          type: string
+          enum: [supplies, rent, utilities, salaries, marketing, equipment, other]
+        paidAt:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+      required: [description, amount, category]
+
+    # ── Dashboard ────────────────────────────────────────────────────────────
+    DashboardSummary:
+      type: object
+      properties:
+        todayAppointments:
+          type: integer
+        todayRevenue:
+          type: string
+        monthRevenue:
+          type: string
+        newClientsThisMonth:
+          type: integer
+        completedToday:
+          type: integer
+        cancelledToday:
+          type: integer
+        totalClients:
+          type: integer
+        totalEmployees:
+          type: integer
+      required: [todayAppointments, todayRevenue, monthRevenue, newClientsThisMonth, completedToday, cancelledToday, totalClients, totalEmployees]
+
+    TopService:
+      type: object
+      properties:
+        serviceId:
+          type: integer
+        serviceName:
+          type: string
+        count:
+          type: integer
+        revenue:
+          type: string
+      required: [serviceId, serviceName, count, revenue]
+
+    RevenueTrendDay:
+      type: object
+      properties:
+        date:
+          type: string
+        revenue:
+          type: string
+        appointmentCount:
+          type: integer
+      required: [date, revenue, appointmentCount]
