@@ -8,6 +8,13 @@
       "when": 1778089167650,
       "tag": "0000_closed_lake",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1778089167651,
+      "tag": "0001_nullable_clerk_user_id",
+      "breakpoints": true
     }
   ]
 }

@@ -4,7 +4,7 @@ import { z } from "zod/v4";
 
 export const salonsTable = pgTable("salons", {
   id: serial("id").primaryKey(),
-  clerkUserId: text("clerk_user_id").notNull().unique(),
+  clerkUserId: text("clerk_user_id").unique(), // nullable: salons created by admin don't have Clerk accounts
   name: text("name").notNull(),
   logoUrl: text("logo_url"),
   address: text("address"),

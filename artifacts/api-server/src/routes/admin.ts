@@ -3,6 +3,7 @@ import { db } from "@workspace/db";
 import { salonsTable, clientsTable, appointmentsTable, type InsertSalon } from "@workspace/db";
 import { eq, count } from "drizzle-orm";
 import { randomUUID } from "crypto";
+import bcrypt from "bcryptjs";
 
 const router = Router();
 
@@ -64,13 +65,13 @@ router.post("/register", async (req: Request, res: Response) => {
   if (!ownerName?.trim()) { res.status(400).json({ error: "Nome do responsável obrigatório" }); return; }
   if (!email?.trim()) { res.status(400).json({ error: "E-mail obrigatório" }); return; }
 
-  const fakeClerkId = `pending_${randomUUID()}`;
+  
   const values: InsertSalon = {
     name: salonName.trim(),
     email: email.trim(),
     phone: phone?.trim() || null,
-    password: password?.trim() || null,
-    clerkUserId: fakeClerkId,
+    password: password?.trim() ? await bcrypt.hash(password.trim(), 10) : null,
+    clerkUserId: null,
     plan: "gratuito",
   };
   const [salon] = await db.insert(salonsTable).values(values).returning();
@@ -109,13 +110,13 @@ router.post("/salons", requireAdmin, async (req: Request, res: Response) => {
   const { name, email, phone, password, plan } = req.body as { name?: string; email?: string; phone?: string; password?: string; plan?: string };
   if (!name?.trim()) { res.status(400).json({ error: "Nome obrigatório" }); return; }
 
-  const fakeClerkId = `admin_created_${randomUUID()}`;
+  
   const values: InsertSalon = {
     name: name.trim(),
     email: email?.trim() || null,
     phone: phone?.trim() || null,
-    password: password?.trim() || null,
-    clerkUserId: fakeClerkId,
+    password: password?.trim() ? await bcrypt.hash(password.trim(), 10) : null,
+    clerkUserId: null,
     plan: plan === "ativo" ? "ativo" : "gratuito",
   };
   const [salon] = await db.insert(salonsTable).values(values).returning();

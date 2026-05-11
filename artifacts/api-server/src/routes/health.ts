@@ -9,3 +9,8 @@ router.get("/healthz", (_req, res) => {
 });
 
 export default router;
+
+// Alias for Render health checks
+router.get("/health", (_req, res) => {
+  res.json({ status: "ok" });
+});

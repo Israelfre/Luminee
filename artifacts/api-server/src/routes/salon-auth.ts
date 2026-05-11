@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import { db, salonsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { createSalonToken, getSalonIdFromToken, deleteSalonToken } from "../lib/salonTokens";
+import bcrypt from "bcryptjs";
 
 const router = Router();
 
@@ -27,10 +28,16 @@ router.post("/login", async (req: Request, res: Response) => {
     return;
   }
 
-  // If salon has a password set, validate it; if not, allow login with email only
-  if (salon.password !== null && salon.password !== password.trim()) {
-    res.status(401).json({ ok: false, error: "E-mail ou senha incorretos" });
-    return;
+  // Validate password: support both bcrypt hashes and plain-text (legacy)
+  if (salon.password !== null) {
+    const isHash = salon.password.startsWith("$2");
+    const valid = isHash
+      ? await bcrypt.compare(password.trim(), salon.password)
+      : salon.password === password.trim();
+    if (!valid) {
+      res.status(401).json({ ok: false, error: "E-mail ou senha incorretos" });
+      return;
+    }
   }
 
   const token = createSalonToken(salon.id);
