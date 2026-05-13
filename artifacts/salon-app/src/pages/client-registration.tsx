@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { API_PREFIX } from "@/lib/api-url";
 
 interface SalonInfo {
   id: number;
@@ -14,12 +15,10 @@ interface SalonInfo {
   whatsapp?: string | null;
 }
 
-const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
-
 async function fetchSalonInfo(salonId?: string): Promise<SalonInfo | null> {
   const url = salonId
-    ? `${basePath}/api/public/salon?salonId=${salonId}`
-    : `${basePath}/api/public/salon`;
+    ? `${API_PREFIX}/public/salon?salonId=${salonId}`
+    : `${API_PREFIX}/public/salon`;
   const res = await fetch(url);
   if (!res.ok) return null;
   return res.json();
@@ -29,7 +28,7 @@ async function registerClient(data: {
   name: string; email: string; phone: string;
   username: string; password: string; salonId: number;
 }): Promise<{ ok: boolean; error?: string }> {
-  const res = await fetch(`${basePath}/api/public/register`, {
+  const res = await fetch(`${API_PREFIX}/public/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),

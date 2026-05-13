@@ -8,6 +8,7 @@ import {
   X, Check, Loader2, ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
+import { API_PREFIX } from "@/lib/api-url";
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -19,7 +20,7 @@ interface SalonRow {
   password?: string | null;
   logoUrl?: string;
   createdAt: string;
-  clerkUserId: string;
+  clerkUserId: string | null;
   clients: number;
   clientsAtivos: number;
   clientesGratuitos: number;
@@ -63,7 +64,7 @@ function NewClientModal({ onClose, onSaved }: NewClientModalProps) {
     if (password && password.length < 6) { toast.error("Senha com pelo menos 6 caracteres"); return; }
     setBusy(true);
     try {
-      const r = await fetch(`${basePath}/api/admin/salons`, {
+      const r = await fetch(`${API_PREFIX}/admin/salons`, {
         method: "POST",
         headers: adminHeaders(),
         body: JSON.stringify({ name: name.trim(), email: email.trim(), phone: phone.trim(), password: password.trim(), plan }),
@@ -180,7 +181,7 @@ export default function AdminDashboard() {
     try {
       const token = getAdminToken();
       if (!token) { setLocation("/"); return; }
-      const r = await fetch(`${basePath}/api/admin/salons`, { headers: { "Authorization": `Bearer ${token}` } });
+      const r = await fetch(`${API_PREFIX}/admin/salons`, { credentials: "include", headers: adminHeaders() });
       if (r.status === 401) { setLocation("/"); return; }
       setSalons(await r.json());
     } finally { setLoading(false); }
@@ -205,7 +206,7 @@ export default function AdminDashboard() {
     setConfirmDelete(null);
     setDeletingId(id);
     try {
-      await fetch(`${basePath}/api/admin/salons/${id}`, { method: "DELETE", headers: adminHeaders() });
+      await fetch(`${API_PREFIX}/admin/salons/${id}`, { method: "DELETE", headers: adminHeaders() });
       toast.success("Cliente removido");
       load();
     } catch { toast.error("Erro ao remover"); }
@@ -216,7 +217,7 @@ export default function AdminDashboard() {
     const newPlan = s.plan === "ativo" ? "gratuito" : "ativo";
     setPlanBusy(s.id);
     try {
-      await fetch(`${basePath}/api/admin/salons/${s.id}/plan`, {
+      await fetch(`${API_PREFIX}/admin/salons/${s.id}/plan`, {
         method: "PATCH",
         headers: adminHeaders(),
         body: JSON.stringify({ plan: newPlan }),

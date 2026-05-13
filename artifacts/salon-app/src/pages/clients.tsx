@@ -28,6 +28,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { salonHeaders } from "@/contexts/salon-auth-context";
+import { API_PREFIX } from "@/lib/api-url";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
@@ -232,9 +234,9 @@ export default function Clients() {
     const newPlan = currentPlan === "ativo" ? "gratuito" : "ativo";
     setPlanBusy(id);
     try {
-      await fetch(`${basePath}/api/clients/${id}/plan`, {
+      await fetch(`${API_PREFIX}/clients/${id}/plan`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: salonHeaders(),
         credentials: "include",
         body: JSON.stringify({ plan: newPlan }),
       });

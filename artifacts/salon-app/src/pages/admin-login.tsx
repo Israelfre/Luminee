@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/auth-context";
 import { useLocation } from "wouter";
+import { toast } from "sonner";
 
 export default function AdminLogin({ redirectTo = "/admin/dashboard" }: { redirectTo?: string }) {
   const { login } = useAuth();
@@ -12,18 +13,22 @@ export default function AdminLogin({ redirectTo = "/admin/dashboard" }: { redire
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
-  const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) { setError("Preencha e-mail e senha"); return; }
+    if (!email.trim() || !password) {
+      toast.error("Preencha e-mail e senha");
+      return;
+    }
     setBusy(true);
-    setError("");
-    const result = await login(email, password);
+    const result = await login(email.trim(), password);
     setBusy(false);
-    if (!result.ok) setError(result.error ?? "Credenciais inválidas");
-    else setLocation(redirectTo);
+    if (!result.ok) {
+      toast.error(result.error ?? "Credenciais inválidas");
+      return;
+    }
+    setLocation(redirectTo);
   };
 
   return (
@@ -70,7 +75,7 @@ export default function AdminLogin({ redirectTo = "/admin/dashboard" }: { redire
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="email" type="email" placeholder="Seu e-mail"
-                  value={email} onChange={e => { setEmail(e.target.value); setError(""); }}
+                  value={email} onChange={e => setEmail(e.target.value)}
                   className="pl-9 rounded-xl" autoComplete="email"
                 />
               </div>
@@ -82,7 +87,7 @@ export default function AdminLogin({ redirectTo = "/admin/dashboard" }: { redire
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="password" type={showPw ? "text" : "password"} placeholder="••••••••"
-                  value={password} onChange={e => { setPassword(e.target.value); setError(""); }}
+                  value={password} onChange={e => setPassword(e.target.value)}
                   className="pl-9 pr-10 rounded-xl" autoComplete="current-password"
                 />
                 <button type="button" onClick={() => setShowPw(v => !v)}
@@ -91,13 +96,6 @@ export default function AdminLogin({ redirectTo = "/admin/dashboard" }: { redire
                 </button>
               </div>
             </div>
-
-            {error && (
-              <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
-                className="text-sm text-red-600 font-medium text-center bg-red-50 rounded-xl py-2 px-3">
-                {error}
-              </motion.p>
-            )}
 
             <motion.button
               whileTap={{ scale: 0.98 }}

@@ -8,9 +8,18 @@
     "./schema": "./src/schema/index.ts"
   },
   "scripts": {
-    "push": "drizzle-kit push --config ./drizzle.config.ts",
-    "push-force": "drizzle-kit push --force --config ./drizzle.config.ts",
-    "migrate": "drizzle-kit migrate --config ./drizzle.config.ts"
+    "push": "node --env-file=../../.env ./node_modules/drizzle-kit/bin.cjs push --config ./drizzle.config.ts",
+    "push-force": "node --env-file=../../.env ./node_modules/drizzle-kit/bin.cjs push --force --config ./drizzle.config.ts",
+    "migrate": "node --env-file=../../.env ./node_modules/drizzle-kit/bin.cjs migrate --config ./drizzle.config.ts",
+    "migrations": "node --env-file=../../.env ./node_modules/drizzle-kit/bin.cjs migrate --config ./drizzle.config.ts",
+    "db:migrate": "node --env-file=../../.env ./node_modules/drizzle-kit/bin.cjs migrate --config ./drizzle.config.ts",
+    "db:push": "node --env-file=../../.env ./node_modules/drizzle-kit/bin.cjs push --config ./drizzle.config.ts",
+    "generate": "node --env-file=../../.env ./node_modules/drizzle-kit/bin.cjs generate --config ./drizzle.config.ts",
+    "db:generate": "node --env-file=../../.env ./node_modules/drizzle-kit/bin.cjs generate --config ./drizzle.config.ts",
+    "studio": "node --env-file=../../.env ./node_modules/drizzle-kit/bin.cjs studio --config ./drizzle.config.ts",
+    "db:studio": "node --env-file=../../.env ./node_modules/drizzle-kit/bin.cjs studio --config ./drizzle.config.ts",
+    "check": "node --env-file=../../.env ./node_modules/drizzle-kit/bin.cjs check --config ./drizzle.config.ts",
+    "db:check": "node --env-file=../../.env ./node_modules/drizzle-kit/bin.cjs check --config ./drizzle.config.ts"
   },
   "dependencies": {
     "drizzle-orm": "catalog:",

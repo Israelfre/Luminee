@@ -1,8 +1,8 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
 import { setSalonTokenGetter } from "@workspace/api-client-react";
+import { API_PREFIX } from "@/lib/api-url";
+import { getSessionToken, setSessionToken } from "@/lib/session-token";
 
-const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
-const TOKEN_KEY = "luminee_salon_token";
 const SALON_KEY = "luminee_salon_info";
 
 export interface SalonInfo {
@@ -13,14 +13,10 @@ export interface SalonInfo {
   plan?: string | null;
 }
 
-export function getSalonToken(): string | null {
-  return localStorage.getItem(TOKEN_KEY);
-}
-
 export function salonHeaders(): Record<string, string> {
-  const token = getSalonToken();
+  const token = getSessionToken();
   const h: Record<string, string> = { "Content-Type": "application/json" };
-  if (token) h["X-Salon-Token"] = token;
+  if (token) h["X-Auth-Token"] = token;
   return h;
 }
 
@@ -41,16 +37,21 @@ export function SalonAuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<SalonAuthState>({ loggedIn: false, salon: null, loading: true });
 
   const check = useCallback(async () => {
-    const token = getSalonToken();
-    if (!token) { setState({ loggedIn: false, salon: null, loading: false }); return; }
+    const token = getSessionToken();
+    if (!token) {
+      setState({ loggedIn: false, salon: null, loading: false });
+      return;
+    }
     try {
-      const res = await fetch(`${BASE}/api/salon-auth/check`, { headers: { "X-Salon-Token": token } });
+      const res = await fetch(`${API_PREFIX}/salon-auth/check`, {
+        credentials: "include",
+        headers: salonHeaders(),
+      });
       if (res.ok) {
         const saved = localStorage.getItem(SALON_KEY);
-        const salon: SalonInfo | null = saved ? JSON.parse(saved) as SalonInfo : null;
+        const salon: SalonInfo | null = saved ? (JSON.parse(saved) as SalonInfo) : null;
         setState({ loggedIn: true, salon, loading: false });
       } else {
-        localStorage.removeItem(TOKEN_KEY);
         localStorage.removeItem(SALON_KEY);
         setState({ loggedIn: false, salon: null, loading: false });
       }
@@ -60,21 +61,40 @@ export function SalonAuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    setSalonTokenGetter(getSalonToken);
-    return () => { setSalonTokenGetter(null); };
+    setSalonTokenGetter(getSessionToken);
+    return () => {
+      setSalonTokenGetter(null);
+    };
   }, []);
 
-  useEffect(() => { check(); }, [check]);
+  useEffect(() => {
+    void check();
+  }, [check]);
 
   const login = async (email: string, password: string) => {
-    const res = await fetch(`${BASE}/api/salon-auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
-    const data = await res.json() as { ok: boolean; token?: string; salon?: SalonInfo; error?: string };
-    if (data.ok && data.token && data.salon) {
-      localStorage.setItem(TOKEN_KEY, data.token);
+    let res: Response;
+    try {
+      res = await fetch(`${API_PREFIX}/salon-auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ email, password }),
+      });
+    } catch {
+      return {
+        ok: false,
+        error:
+          "Sem ligação à API. Em dev, use o proxy do Vite ou defina VITE_API_URL na mesma origem da API.",
+      };
+    }
+    const data = (await res.json()) as {
+      ok: boolean;
+      sessionId?: string;
+      salon?: SalonInfo;
+      error?: string;
+    };
+    if (data.ok && data.sessionId && data.salon) {
+      setSessionToken(data.sessionId);
       localStorage.setItem(SALON_KEY, JSON.stringify(data.salon));
       setState({ loggedIn: true, salon: data.salon, loading: false });
       return { ok: true };
@@ -83,16 +103,22 @@ export function SalonAuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async () => {
-    const token = getSalonToken();
+    const token = getSessionToken();
     if (token) {
-      await fetch(`${BASE}/api/salon-auth/logout`, { method: "POST", headers: { "X-Salon-Token": token } });
+      await fetch(`${API_PREFIX}/salon-auth/logout`, {
+        method: "POST",
+        credentials: "include",
+        headers: salonHeaders(),
+      });
     }
-    localStorage.removeItem(TOKEN_KEY);
+    setSessionToken(null);
     localStorage.removeItem(SALON_KEY);
     setState({ loggedIn: false, salon: null, loading: false });
   };
 
-  return <SalonAuthContext.Provider value={{ ...state, login, logout }}>{children}</SalonAuthContext.Provider>;
+  return (
+    <SalonAuthContext.Provider value={{ ...state, login, logout }}>{children}</SalonAuthContext.Provider>
+  );
 }
 
 export function useSalonAuth() {

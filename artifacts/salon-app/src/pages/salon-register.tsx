@@ -7,8 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-
-const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+import { API_PREFIX } from "@/lib/api-url";
 
 interface FormData {
   salonName: string;
@@ -20,7 +19,7 @@ interface FormData {
 }
 
 async function submitRegistration(data: FormData): Promise<{ ok: boolean; error?: string }> {
-  const res = await fetch(`${basePath}/api/admin/register`, {
+  const res = await fetch(`${API_PREFIX}/admin/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),

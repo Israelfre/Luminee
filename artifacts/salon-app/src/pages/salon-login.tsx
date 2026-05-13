@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Flower2, Eye, EyeOff, Loader2 } from "lucide-react";
+import { Link } from "wouter";
 import { useSalonAuth } from "@/contexts/salon-auth-context";
 import { toast } from "sonner";
 
@@ -48,6 +49,13 @@ export default function SalonLogin() {
           </div>
           <h1 className="font-serif text-3xl font-bold" style={{ color: "hsl(338,55%,30%)" }}>Luminee</h1>
           <p className="text-gray-500 text-sm mt-1">Acesse o painel do seu salão</p>
+          <p className="text-gray-400 text-xs mt-2 max-w-sm mx-auto">
+            Conta de <strong className="text-gray-500">salão</strong> (cadastro do negócio). Administrador da plataforma: use{" "}
+            <Link href="/admin" className="text-pink-600 hover:text-pink-700 underline font-medium">
+              /admin
+            </Link>
+            .
+          </p>
         </div>
 
         <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/60 p-8">

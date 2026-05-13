@@ -9,7 +9,11 @@
 1. Faça push do projeto para um repositório Git
 2. No Render, clique em **New → Blueprint**
 3. Conecte o repositório e o Render vai detectar o `render.yaml` automaticamente
-4. Configure as variáveis de ambiente obrigatórias (veja abaixo)
+4. No painel do serviço **luminee-api**, defina estas variáveis (todas obrigatórias no primeiro deploy antes do seed no build):
+   - `DATABASE_URL` — URL interna do Postgres do Render (ou externa com SSL)
+   - `SESSION_SECRET` — ex.: saída de `openssl rand -hex 32`
+   - `ADMIN_EMAIL` / `ADMIN_PASSWORD` — primeiro administrador (hash gravado pelo seed)
+   - `DEMO_SALON_EMAIL` / `DEMO_SALON_PASSWORD` — primeiro salão demo, se ainda não existir nenhum salão
 5. Clique em **Apply**
 
 O Render vai criar automaticamente:
@@ -41,17 +45,14 @@ O Render vai criar automaticamente:
 | `NODE_ENV` | `production` |
 | `DATABASE_URL` | URL interna do banco PostgreSQL |
 | `SESSION_SECRET` | String aleatória (ex: `openssl rand -hex 32`) |
-| `ADMIN_EMAIL` | Email de acesso ao painel admin |
-| `ADMIN_PASSWORD` | Senha do painel admin |
+| `ADMIN_EMAIL` | E-mail do primeiro utilizador admin (gravado na tabela `admin_users` pelo seed) |
+| `ADMIN_PASSWORD` | Senha em texto do primeiro admin (apenas na primeira execução do seed; defina no painel do Render, nunca no repositório) |
+| `DEMO_SALON_EMAIL` | E-mail do salão demo (só usado se o seed criar o primeiro salão) |
+| `DEMO_SALON_PASSWORD` | Senha do salão demo (apenas no painel do Render / `.env` local, nunca em Git) |
 
-### Variáveis opcionais (Clerk SSO)
-Deixe em branco para usar apenas login por email+senha.
+### Sessões (padrão gestorx7)
 
-| Variável | Valor |
-|---|---|
-| `CLERK_SECRET_KEY` | Chave secreta do Clerk |
-| `CLERK_PUBLISHABLE_KEY` | Chave pública do Clerk |
-| `VITE_CLERK_PUBLISHABLE_KEY` | Mesma chave pública (para o frontend) |
+As sessões ficam na tabela `sessions` (Postgres) via `connect-pg-simple`. O front pode enviar `X-Auth-Token` com o `sessionId` devolvido no login quando o cookie não atravessa origens diferentes (Render API + site estático).
 
 ## Acessos após deploy
 
@@ -62,15 +63,9 @@ Deixe em branco para usar apenas login por email+senha.
 | `https://sua-app.onrender.com/registrar` | Cadastro de novo salão |
 | `https://sua-app.onrender.com/api/health` | Health check |
 
-### Credenciais padrão
+### Credenciais
 
-**Painel Admin:**
-- Email: `admin@luminee.com` (ou o valor de `ADMIN_EMAIL`)
-- Senha: `admin40028922` (ou o valor de `ADMIN_PASSWORD`)
-
-**Salão Demo (criado automaticamente no primeiro boot):**
-- Email: `demo@luminee.com`
-- Senha: `demo123456` (ou o valor de `DEMO_SALON_PASSWORD`)
+Não existem utilizadores nem senhas fixos no código ou na documentação. O primeiro `seed` usa apenas `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `DEMO_SALON_EMAIL` e `DEMO_SALON_PASSWORD` definidos **no painel de variáveis de ambiente do Render** (ou no `.env` local, que está no `.gitignore`). Guarde esses valores num gestor de passwords à parte do Git.
 
 ## Arquitetura no Render
 

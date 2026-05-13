@@ -371,17 +371,22 @@ export async function customFetch<T = unknown>(
     }
   }
 
-  // Attach salon token when a salon token getter is configured.
-  if (_salonTokenGetter && !headers.has("x-salon-token")) {
+  // Attach session id (gestorx7: X-Auth-Token) for salão / API quando não há cookie cross-site.
+  if (_salonTokenGetter && !headers.has("authorization") && !headers.has("x-auth-token")) {
     const token = await _salonTokenGetter();
     if (token) {
-      headers.set("x-salon-token", token);
+      headers.set("x-auth-token", token);
     }
   }
 
   const requestInfo = { method, url: resolveUrl(input) };
 
-  const response = await fetch(input, { ...init, method, headers });
+  const response = await fetch(input, {
+    ...init,
+    method,
+    headers,
+    credentials: init.credentials ?? "include",
+  });
 
   if (!response.ok) {
     const errorData = await parseErrorBody(response, method);

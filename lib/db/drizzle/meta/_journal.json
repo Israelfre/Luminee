@@ -15,6 +15,13 @@
       "when": 1778089167651,
       "tag": "0001_nullable_clerk_user_id",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1778089167652,
+      "tag": "0002_sessions_admin_users",
+      "breakpoints": true
     }
   ]
 }

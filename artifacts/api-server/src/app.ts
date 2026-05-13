@@ -2,22 +2,25 @@ import express, { type Express } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
 import session from "express-session";
-import { clerkMiddleware } from "@clerk/express";
-import { publishableKeyFromHost } from "@clerk/shared/keys";
+import connectPgSimple from "connect-pg-simple";
+import pg from "pg";
+import { createPgPoolConfig } from "@workspace/db";
 import router from "./routes";
 import { logger } from "./lib/logger";
 import path from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
-import {
-  CLERK_PROXY_PATH,
-  clerkProxyMiddleware,
-  getClerkProxyHost,
-} from "./middlewares/clerkProxyMiddleware";
+import { loadSessionFromToken } from "./middlewares/loadSessionFromToken";
+import "./types/session.d.ts";
+
+const PgSession = connectPgSimple(session);
 
 const app: Express = express();
 
-app.set("trust proxy", 1);
+const isProd = process.env.NODE_ENV === "production";
+if (isProd) {
+  app.set("trust proxy", 1);
+}
 
 app.use(
   pinoHttp({
@@ -39,45 +42,40 @@ app.use(
   }),
 );
 
-app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
-
 app.use(cors({ credentials: true, origin: true }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: "20mb" }));
+app.use(express.urlencoded({ extended: true, limit: "20mb" }));
 
-app.use(
-  session({
-    secret: process.env["SESSION_SECRET"] ?? "luminee-secret-dev-change-in-prod",
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    },
+const pgPool = new pg.Pool(createPgPoolConfig());
+
+const sessionMiddleware = session({
+  store: new PgSession({
+    pool: pgPool,
+    tableName: "sessions",
   }),
-);
+  name: "luminee.sid",
+  secret: process.env["SESSION_SECRET"] ?? "luminee-secret-dev-change-in-prod",
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: isProd ? "none" : "lax",
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  },
+});
 
-app.use(
-  clerkMiddleware((req) => ({
-    publishableKey: publishableKeyFromHost(
-      getClerkProxyHost(req) ?? "",
-      process.env.CLERK_PUBLISHABLE_KEY,
-    ),
-  })),
-);
+app.use(sessionMiddleware);
+app.use(loadSessionFromToken);
 
 app.use("/api", router);
 
 // Serve React frontend static files in production
 if (process.env.NODE_ENV === "production") {
   const __dirname = path.dirname(fileURLToPath(import.meta.url));
-  // Built frontend is placed at artifacts/salon-app/dist/public by Vite
   const frontendDist = path.resolve(__dirname, "../../salon-app/dist/public");
   if (fs.existsSync(frontendDist)) {
     app.use(express.static(frontendDist));
-    // SPA fallback: serve index.html for all non-API routes
     app.get("*", (_req, res) => {
       res.sendFile(path.join(frontendDist, "index.html"));
     });

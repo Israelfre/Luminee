@@ -1,10 +1,9 @@
-import { ClerkProvider, useClerk } from "@clerk/react";
 import { Switch, Route, useLocation, Router as WouterRouter, Redirect } from "wouter";
-import { QueryClientProvider, useQueryClient } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { Toaster as SonnerToaster } from "sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { queryClient } from "./lib/queryClient";
-import { useEffect, useRef } from "react";
 
 import Dashboard from "./pages/dashboard";
 import Appointments from "./pages/appointments";
@@ -23,34 +22,7 @@ import { ThemeProvider } from "./contexts/theme-context";
 import { AuthProvider, useAuth } from "./contexts/auth-context";
 import { SalonAuthProvider, useSalonAuth } from "./contexts/salon-auth-context";
 
-const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
-const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL as string | undefined;
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
-
-function stripBase(path: string): string {
-  return basePath && path.startsWith(basePath)
-    ? path.slice(basePath.length) || "/"
-    : path;
-}
-
-function ClerkQueryClientCacheInvalidator() {
-  const { addListener } = useClerk();
-  const qc = useQueryClient();
-  const prevUserIdRef = useRef<string | null | undefined>(undefined);
-
-  useEffect(() => {
-    const unsubscribe = addListener(({ user }) => {
-      const userId = user?.id ?? null;
-      if (prevUserIdRef.current !== undefined && prevUserIdRef.current !== userId) {
-        qc.clear();
-      }
-      prevUserIdRef.current = userId;
-    });
-    return unsubscribe;
-  }, [addListener, qc]);
-
-  return null;
-}
 
 function AdminRoutes() {
   const { loggedIn, loading } = useAuth();
@@ -70,10 +42,14 @@ function SalonRoutes() {
   const [location] = useLocation();
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center"
-        style={{ background: "linear-gradient(135deg,hsl(338,60%,97%),hsl(22,55%,96%))" }}>
-        <div className="w-8 h-8 border-4 rounded-full animate-spin"
-          style={{ borderColor: "hsl(338,62%,50%)", borderTopColor: "transparent" }} />
+      <div
+        className="min-h-screen flex items-center justify-center"
+        style={{ background: "linear-gradient(135deg,hsl(338,60%,97%),hsl(22,55%,96%))" }}
+      >
+        <div
+          className="w-8 h-8 border-4 rounded-full animate-spin"
+          style={{ borderColor: "hsl(338,62%,50%)", borderTopColor: "transparent" }}
+        />
       </div>
     );
   }
@@ -108,31 +84,20 @@ function Router() {
 }
 
 function App() {
-  const [, setLocation] = useLocation();
-
   return (
-    <ClerkProvider
-      publishableKey={clerkPubKey}
-      {...(clerkProxyUrl ? { proxyUrl: clerkProxyUrl } : {})}
-      signInUrl={`${basePath}/sign-in`}
-      signUpUrl={`${basePath}/sign-up`}
-      routerPush={(to) => setLocation(stripBase(to))}
-      routerReplace={(to) => setLocation(stripBase(to), { replace: true })}
-    >
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <ClerkQueryClientCacheInvalidator />
-          <AuthProvider>
-            <SalonAuthProvider>
-              <WouterRouter base={basePath}>
-                <Router />
-              </WouterRouter>
-            </SalonAuthProvider>
-          </AuthProvider>
-          <Toaster />
-        </TooltipProvider>
-      </QueryClientProvider>
-    </ClerkProvider>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <AuthProvider>
+          <SalonAuthProvider>
+            <WouterRouter base={basePath}>
+              <Router />
+            </WouterRouter>
+          </SalonAuthProvider>
+        </AuthProvider>
+        <Toaster />
+        <SonnerToaster richColors position="top-center" />
+      </TooltipProvider>
+    </QueryClientProvider>
   );
 }
 
