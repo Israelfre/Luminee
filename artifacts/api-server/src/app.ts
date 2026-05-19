@@ -11,7 +11,6 @@ import path from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
 import { loadSessionFromToken } from "./middlewares/loadSessionFromToken";
-import "./types/session.d.ts";
 
 const PgSession = connectPgSimple(session);
 

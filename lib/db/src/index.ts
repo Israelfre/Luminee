@@ -4,14 +4,14 @@ import * as schema from "./schema";
 
 const { Pool } = pg;
 
-if (!process.env.DATABASE_URL) {
-  throw new Error(
-    "DATABASE_URL must be set. Did you forget to provision a database?",
-  );
-}
-
 export function createPgPoolConfig(): pg.PoolConfig {
-  const connectionString = process.env.DATABASE_URL!.trim();
+  const dbUrl = process.env.DATABASE_URL;
+  if (!dbUrl) {
+    throw new Error(
+      "DATABASE_URL must be set. Did you forget to provision a database?",
+    );
+  }
+  const connectionString = dbUrl.trim();
   if (/sslmode=\s*disable/i.test(connectionString)) {
     return { connectionString };
   }
@@ -53,7 +53,37 @@ export function createPgPoolConfig(): pg.PoolConfig {
   };
 }
 
-export const pool = new Pool(createPgPoolConfig());
-export const db = drizzle(pool, { schema });
+let _pool: pg.Pool | undefined;
+let _db: ReturnType<typeof drizzle<typeof schema>> | undefined;
+
+export function getPool(): pg.Pool {
+  if (!_pool) {
+    _pool = new Pool(createPgPoolConfig());
+  }
+  return _pool;
+}
+
+export function getDb(): ReturnType<typeof drizzle<typeof schema>> {
+  if (!_db) {
+    _db = drizzle(getPool(), { schema });
+  }
+  return _db;
+}
+
+// Lazy proxies so existing code using `pool` and `db` directly continues to work
+export const pool: pg.Pool = new Proxy({} as pg.Pool, {
+  get(_target, prop) {
+    return (getPool() as Record<string | symbol, unknown>)[prop];
+  },
+});
+
+export const db: ReturnType<typeof drizzle<typeof schema>> = new Proxy(
+  {} as ReturnType<typeof drizzle<typeof schema>>,
+  {
+    get(_target, prop) {
+      return (getDb() as Record<string | symbol, unknown>)[prop];
+    },
+  },
+);
 
 export * from "./schema";

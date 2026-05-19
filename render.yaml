@@ -5,8 +5,8 @@ services:
     runtime: node
     plan: starter
     autoDeploy: true
-    buildCommand: npm i -g pnpm@10.33.2 --force && CI=true pnpm install --frozen-lockfile && pnpm db:migrate && pnpm --filter @workspace/scripts run seed && pnpm --dir artifacts/api-server run build
-    startCommand: node --enable-source-maps artifacts/api-server/dist/index.mjs
+    buildCommand: npm i -g pnpm@10.33.2 --force && CI=true pnpm install --frozen-lockfile && pnpm --dir artifacts/salon-app run build && pnpm --dir artifacts/api-server run build
+    startCommand: sh scripts/start-render.sh
     healthCheckPath: /api/health
     envVars:
       - key: NODE_VERSION
@@ -25,15 +25,3 @@ services:
         sync: false
       - key: DATABASE_URL
         sync: false
-
-  - type: web
-    name: luminee-front
-    runtime: static
-    autoDeploy: true
-    buildCommand: npm i -g pnpm@10.33.2 --force && CI=true pnpm install --frozen-lockfile && pnpm --dir artifacts/salon-app run build
-    staticPublishPath: artifacts/salon-app/dist/public
-    envVars:
-      - key: NODE_VERSION
-        value: 22.13.0
-      - key: VITE_API_URL
-        value: https://luminee-api.onrender.com
