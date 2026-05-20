@@ -1,0 +1,13 @@
+# --- Database ---
+DATABASE_URL=postgresql://luminee_db_user:H9fb4x5sKCzJdG22URllnJ0zl6QWr5ZO@dpg-d86utrn7f7vs73b1bj80-a/luminee_db
+
+# --- API ---
+PORT=8080
+NODE_ENV=development
+
+# --- Auth (session) ---
+SESSION_SECRET=907af3940239bb5e55d67c04757db443e3151b433f82e5874ce053ae3ab3e9fa
+
+# --- Admin ---
+ADMIN_EMAIL=admin@luminee.com
+ADMIN_PASSWORD=admin40028922
