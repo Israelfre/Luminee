@@ -5,7 +5,7 @@ services:
     runtime: node
     plan: starter
     autoDeploy: true
-    buildCommand: npm i -g pnpm@10.33.2 --force && CI=true pnpm install --frozen-lockfile && pnpm --dir artifacts/salon-app run build && pnpm --dir artifacts/api-server run build
+    buildCommand: npm i -g pnpm@10.33.2 --force && CI=true pnpm install && pnpm --dir artifacts/salon-app run build && pnpm --dir artifacts/api-server run build
     startCommand: sh scripts/start-render.sh
     healthCheckPath: /api/health
     envVars:
