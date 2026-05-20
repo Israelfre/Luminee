@@ -91,6 +91,11 @@ router.get("/check", (req: Request, res: Response) => {
   }
 });
 
+/**
+ * Cadastro público de salão (auto-registro pelo formulário /registrar).
+ * Não exige auth de admin — qualquer pessoa pode solicitar cadastro.
+ * O admin depois aprova/configura pelo painel.
+ */
 router.post("/register", async (req: Request, res: Response) => {
   const { salonName, ownerName, email, phone, password, message } = req.body as {
     salonName?: string;
@@ -112,12 +117,28 @@ router.post("/register", async (req: Request, res: Response) => {
     res.status(400).json({ error: "E-mail obrigatório" });
     return;
   }
+  if (!password?.trim() || password.trim().length < 6) {
+    res.status(400).json({ error: "Senha obrigatória (mínimo 6 caracteres)" });
+    return;
+  }
+
+  // Verifica se e-mail já existe
+  const [existing] = await db
+    .select({ id: salonsTable.id })
+    .from(salonsTable)
+    .where(eq(salonsTable.email, email.trim().toLowerCase()))
+    .limit(1);
+
+  if (existing) {
+    res.status(409).json({ error: "E-mail já cadastrado" });
+    return;
+  }
 
   const values: InsertSalon = {
     name: salonName.trim(),
-    email: email.trim(),
+    email: email.trim().toLowerCase(),
     phone: phone?.trim() || null,
-    password: password?.trim() ? await bcrypt.hash(password.trim(), 10) : null,
+    password: await bcrypt.hash(password.trim(), 10),
     clerkUserId: null,
     plan: "gratuito",
   };
@@ -144,7 +165,6 @@ router.get("/salons", requireAdmin, async (_req: Request, res: Response) => {
         name: s.name,
         email: s.email,
         phone: s.phone,
-        password: s.password,
         logoUrl: s.logoUrl,
         createdAt: s.createdAt.toISOString(),
         clerkUserId: s.clerkUserId,
@@ -174,7 +194,7 @@ router.post("/salons", requireAdmin, async (req: Request, res: Response) => {
 
   const values: InsertSalon = {
     name: name.trim(),
-    email: email?.trim() || null,
+    email: email?.trim().toLowerCase() || null,
     phone: phone?.trim() || null,
     password: password?.trim() ? await bcrypt.hash(password.trim(), 10) : null,
     clerkUserId: null,

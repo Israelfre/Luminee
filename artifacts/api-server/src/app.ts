@@ -41,7 +41,30 @@ app.use(
   }),
 );
 
-app.use(cors({ credentials: true, origin: true }));
+// CORS: em produção usa VITE_API_URL ou permite qualquer origem com credentials
+// (necessário para o front estático servido pelo mesmo serviço no Render)
+const allowedOrigins = (() => {
+  const raw = process.env.ALLOWED_ORIGINS ?? process.env.VITE_API_URL ?? "";
+  return raw
+    .split(",")
+    .map((o) => o.trim())
+    .filter(Boolean);
+})();
+
+app.use(
+  cors({
+    credentials: true,
+    origin: (origin, callback) => {
+      // sem origem = same-origin (curl, SSR, etc.) → sempre ok
+      if (!origin) return callback(null, true);
+      // em dev ou sem lista configurada → permite tudo
+      if (!isProd || allowedOrigins.length === 0) return callback(null, true);
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      callback(new Error(`Origem não permitida pelo CORS: ${origin}`));
+    },
+  }),
+);
+
 app.use(express.json({ limit: "20mb" }));
 app.use(express.urlencoded({ extended: true, limit: "20mb" }));
 
@@ -51,6 +74,8 @@ const sessionMiddleware = session({
   store: new PgSession({
     pool: pgPool,
     tableName: "sessions",
+    // Limpa sessões expiradas a cada hora
+    pruneSessionInterval: 60 * 60,
   }),
   name: "luminee.sid",
   secret: process.env["SESSION_SECRET"] ?? "luminee-secret-dev-change-in-prod",
@@ -70,7 +95,7 @@ app.use(loadSessionFromToken);
 app.use("/api", router);
 
 // Serve React frontend static files in production
-if (process.env.NODE_ENV === "production") {
+if (isProd) {
   const __dirname = path.dirname(fileURLToPath(import.meta.url));
   const frontendDist = path.resolve(__dirname, "../../salon-app/dist/public");
   if (fs.existsSync(frontendDist)) {

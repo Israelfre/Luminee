@@ -1,6 +1,6 @@
 /**
  * Seed: 1) usuário admin na tabela `admin_users` (se vazia)
- *       2) salão demo (se não houver salões)
+ *       2) salão demo (se não houver salões E as variáveis demo existirem)
  *
  * Run: pnpm --filter @workspace/scripts run seed
  *
@@ -22,7 +22,13 @@ function requireEnv(name: string): string {
   return v.trim();
 }
 
+function optionalEnv(name: string): string | null {
+  const v = process.env[name];
+  return typeof v === "string" && v.trim() ? v.trim() : null;
+}
+
 async function seed() {
+  // ── Admin ─────────────────────────────────────────────────────────────────
   const [adminCountRow] = await db.select({ total: count() }).from(adminUsersTable);
   if (Number(adminCountRow?.total) === 0) {
     const adminEmail = requireEnv("ADMIN_EMAIL").toLowerCase();
@@ -37,19 +43,28 @@ async function seed() {
     console.log("Admin já existe — ignorando criação de admin.");
   }
 
+  // ── Salão demo (opcional) ─────────────────────────────────────────────────
   const [row] = await db.select({ total: count() }).from(salonsTable);
   if (Number(row?.total) > 0) {
     console.log("DB já tem salões — pulando seed de salão demo.");
     process.exit(0);
   }
 
-  const demoEmail = requireEnv("DEMO_SALON_EMAIL").toLowerCase();
-  const demoPassword = requireEnv("DEMO_SALON_PASSWORD");
+  const demoEmail = optionalEnv("DEMO_SALON_EMAIL");
+  const demoPassword = optionalEnv("DEMO_SALON_PASSWORD");
+
+  if (!demoEmail || !demoPassword) {
+    console.log(
+      "⚠️  DEMO_SALON_EMAIL / DEMO_SALON_PASSWORD não definidos — pulando criação de salão demo.",
+    );
+    process.exit(0);
+  }
+
   const hashed = await bcrypt.hash(demoPassword, 10);
 
   await db.insert(salonsTable).values({
     name: "Luminee Demo",
-    email: demoEmail,
+    email: demoEmail.toLowerCase(),
     phone: "(11) 99999-9999",
     password: hashed,
     clerkUserId: null,

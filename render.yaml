@@ -25,3 +25,8 @@ services:
         sync: false
       - key: DATABASE_URL
         sync: false
+      # Opcional: lista de origens permitidas no CORS separadas por vírgula
+      # Ex.: https://luminee-api.onrender.com,https://meudominio.com
+      # Se não definido, aceita qualquer origem (ok para front servido pelo mesmo serviço)
+      - key: ALLOWED_ORIGINS
+        sync: false
