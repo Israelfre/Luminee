@@ -18,6 +18,7 @@ interface SalonRow {
   email?: string;
   phone?: string;
   password?: string | null;
+  passwordPlain?: string | null;
   logoUrl?: string;
   createdAt: string;
   clerkUserId: string | null;
@@ -343,9 +344,9 @@ export default function AdminDashboard() {
                     </div>
                     {s.email && <p className="text-xs text-zinc-500">{s.email}</p>}
                     <div className="flex items-center gap-3">
-                      {s.password ? (
+                      {s.passwordPlain ? (
                         <span className="flex items-center gap-1 text-xs text-zinc-500">
-                          <span className="font-mono">{showPw[s.id] ? s.password : "••••••••"}</span>
+                          <span className="font-mono">{showPw[s.id] ? s.passwordPlain : "••••••••"}</span>
                           <button onClick={() => setShowPw(p => ({ ...p, [s.id]: !p[s.id] }))}
                             className="text-zinc-600 hover:text-zinc-400 transition-colors">
                             {showPw[s.id] ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}

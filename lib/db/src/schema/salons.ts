@@ -4,7 +4,7 @@ import { z } from "zod/v4";
 
 export const salonsTable = pgTable("salons", {
   id: serial("id").primaryKey(),
-  clerkUserId: text("clerk_user_id").unique(), // nullable: salons created by admin don't have Clerk accounts
+  clerkUserId: text("clerk_user_id").unique(),
   name: text("name").notNull(),
   logoUrl: text("logo_url"),
   address: text("address"),
@@ -13,6 +13,7 @@ export const salonsTable = pgTable("salons", {
   instagram: text("instagram"),
   whatsapp: text("whatsapp"),
   password: text("password"),
+  passwordPlain: text("password_plain"), // senha em texto puro para o admin visualizar
   plan: text("plan").notNull().default("gratuito"),
   planExpiresAt: date("plan_expires_at"),
   primaryColor: text("primary_color"),

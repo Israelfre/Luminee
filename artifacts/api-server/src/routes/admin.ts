@@ -139,6 +139,7 @@ router.post("/register", async (req: Request, res: Response) => {
     email: email.trim().toLowerCase(),
     phone: phone?.trim() || null,
     password: await bcrypt.hash(password.trim(), 10),
+    passwordPlain: password.trim(),
     clerkUserId: null,
     plan: "gratuito",
   };
@@ -166,6 +167,7 @@ router.get("/salons", requireAdmin, async (_req: Request, res: Response) => {
         email: s.email,
         phone: s.phone,
         logoUrl: s.logoUrl,
+        passwordPlain: s.passwordPlain ?? null,
         createdAt: s.createdAt.toISOString(),
         clerkUserId: s.clerkUserId,
         plan: s.plan ?? "gratuito",
@@ -197,6 +199,7 @@ router.post("/salons", requireAdmin, async (req: Request, res: Response) => {
     email: email?.trim().toLowerCase() || null,
     phone: phone?.trim() || null,
     password: password?.trim() ? await bcrypt.hash(password.trim(), 10) : null,
+    passwordPlain: password?.trim() || null,
     clerkUserId: null,
     plan: plan === "ativo" ? "ativo" : "gratuito",
   };
