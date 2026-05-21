@@ -17,7 +17,7 @@ import {
   Loader2, Plus, Search, User, Phone, Mail, FileText,
   CalendarDays, Trash2, Heart, MessageCircle, AlertCircle,
   Banknote, CreditCard, Smartphone, ArrowLeftRight, Check,
-  ChevronRight, Star, Pencil, Link2, UserCheck, Zap, Gift,
+  ChevronRight, Star, Pencil, UserCheck, Zap, Gift,
 } from "lucide-react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -202,13 +202,9 @@ export default function Clients() {
   const qc = useQueryClient();
   const { data: salon } = useGetSalon({ query: { queryKey: getGetSalonQueryKey(), retry: false } });
 
-  const registrationLink = salon
     ? `${window.location.origin}${basePath}/cadastro?s=${salon.id}`
     : `${window.location.origin}${basePath}/cadastro`;
 
-  const copyLink = () => {
-    navigator.clipboard.writeText(registrationLink).then(() =>
-      toast.success("Link copiado! Envie para sua cliente se cadastrar 🔗")
     );
   };
 
@@ -331,11 +327,6 @@ export default function Clients() {
             <Input placeholder="Buscar por nome..." className="pl-9 rounded-2xl"
               value={search} onChange={e => setSearch(e.target.value)} />
           </div>
-          <motion.button whileTap={{ scale: 0.97 }} onClick={copyLink}
-            className="flex items-center gap-1.5 px-3 h-10 rounded-2xl text-sm font-semibold border-2 transition-all hover:shadow-sm whitespace-nowrap"
-            style={{ borderColor: "hsl(338,50%,80%)", color: "hsl(338,60%,38%)", background: "hsl(338,60%,97%)" }}
-            title={registrationLink}>
-            <Link2 className="h-4 w-4" />Link cadastro
           </motion.button>
           <motion.button whileTap={{ scale: 0.97 }} onClick={() => { form.reset(); setAddOpen(true); }}
             className="flex items-center gap-2 px-4 h-10 rounded-2xl text-sm font-semibold text-white shadow-md hover:opacity-90 transition-opacity whitespace-nowrap"
