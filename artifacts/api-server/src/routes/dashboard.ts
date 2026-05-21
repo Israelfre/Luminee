@@ -6,6 +6,32 @@ import { requireSalon } from "../middlewares/requireAuth";
 const router = Router();
 type AuthRequest = Request & { salonId: number };
 
+// Soma pagamentos da tabela payments + agendamentos pagos diretamente (paymentAmount)
+async function calcRevenue(salonId: number, from: Date, to: Date): Promise<string> {
+  const [fromPayments] = await db
+    .select({ total: sum(paymentsTable.amount) })
+    .from(paymentsTable)
+    .where(and(
+      eq(paymentsTable.salonId, salonId),
+      gte(paymentsTable.paidAt, from),
+      lte(paymentsTable.paidAt, to),
+    ));
+
+  const [fromAppointments] = await db
+    .select({ total: sum(appointmentsTable.paymentAmount) })
+    .from(appointmentsTable)
+    .where(and(
+      eq(appointmentsTable.salonId, salonId),
+      eq(appointmentsTable.paymentStatus, "paid"),
+      gte(appointmentsTable.startsAt, from),
+      lte(appointmentsTable.startsAt, to),
+    ));
+
+  const a = parseFloat(fromPayments.total ?? "0");
+  const b = parseFloat(fromAppointments.total ?? "0");
+  return (a + b).toFixed(2);
+}
+
 router.get("/summary", requireSalon, async (req: Request, res: Response) => {
   const { salonId } = req as AuthRequest;
   const now = new Date();
@@ -43,24 +69,6 @@ router.get("/summary", requireSalon, async (req: Request, res: Response) => {
       lte(appointmentsTable.startsAt, todayEnd),
     ));
 
-  const [todayRevRow] = await db
-    .select({ total: sum(paymentsTable.amount) })
-    .from(paymentsTable)
-    .where(and(
-      eq(paymentsTable.salonId, salonId),
-      gte(paymentsTable.paidAt, todayStart),
-      lte(paymentsTable.paidAt, todayEnd),
-    ));
-
-  const [monthRevRow] = await db
-    .select({ total: sum(paymentsTable.amount) })
-    .from(paymentsTable)
-    .where(and(
-      eq(paymentsTable.salonId, salonId),
-      gte(paymentsTable.paidAt, monthStart),
-      lte(paymentsTable.paidAt, monthEnd),
-    ));
-
   const [newClientsRow] = await db
     .select({ count: count() })
     .from(clientsTable)
@@ -80,10 +88,13 @@ router.get("/summary", requireSalon, async (req: Request, res: Response) => {
     .from(employeesTable)
     .where(eq(employeesTable.salonId, salonId));
 
+  const todayRevenue = await calcRevenue(salonId, todayStart, todayEnd);
+  const monthRevenue = await calcRevenue(salonId, monthStart, monthEnd);
+
   res.json({
     todayAppointments: todayAppts.count,
-    todayRevenue: todayRevRow.total ?? "0",
-    monthRevenue: monthRevRow.total ?? "0",
+    todayRevenue,
+    monthRevenue,
     newClientsThisMonth: newClientsRow.count,
     completedToday: completedToday.count,
     cancelledToday: cancelledToday.count,
@@ -129,14 +140,7 @@ router.get("/revenue-trend", requireSalon, async (req: Request, res: Response) =
     const dayEnd = new Date(dayStart.getTime() + 86400000 - 1);
     const dateStr = dayStart.toISOString().split("T")[0];
 
-    const [revRow] = await db
-      .select({ total: sum(paymentsTable.amount) })
-      .from(paymentsTable)
-      .where(and(
-        eq(paymentsTable.salonId, salonId),
-        gte(paymentsTable.paidAt, dayStart),
-        lte(paymentsTable.paidAt, dayEnd),
-      ));
+    const revenue = await calcRevenue(salonId, dayStart, dayEnd);
 
     const [apptRow] = await db
       .select({ count: count() })
@@ -147,7 +151,7 @@ router.get("/revenue-trend", requireSalon, async (req: Request, res: Response) =
         lte(appointmentsTable.startsAt, dayEnd),
       ));
 
-    days.push({ date: dateStr, revenue: revRow.total ?? "0", appointmentCount: apptRow.count });
+    days.push({ date: dateStr, revenue, appointmentCount: apptRow.count });
   }
 
   res.json(days);
