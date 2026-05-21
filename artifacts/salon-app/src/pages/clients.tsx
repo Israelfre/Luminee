@@ -6,7 +6,6 @@ import {
   useUpdateAppointment, useCreatePayment,
   getListPaymentsQueryKey,
   getClient, AppointmentDetail,
-  useGetSalon, getGetSalonQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -188,7 +187,6 @@ function ClientFormFields({ form, onSubmit, busy, label }: {
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
-const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 export default function Clients() {
   const [search, setSearch] = useState("");
@@ -200,13 +198,7 @@ export default function Clients() {
   const [payBusy, setPayBusy] = useState(false);
   const [planBusy, setPlanBusy] = useState<number | null>(null);
   const qc = useQueryClient();
-  const { data: salon } = useGetSalon({ query: { queryKey: getGetSalonQueryKey(), retry: false } });
 
-    ? `${window.location.origin}${basePath}/cadastro?s=${salon.id}`
-    : `${window.location.origin}${basePath}/cadastro`;
-
-    );
-  };
 
   const { data: clients, isLoading } = useListClients(
     search ? { search } : undefined,
