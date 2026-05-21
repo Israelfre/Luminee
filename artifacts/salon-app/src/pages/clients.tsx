@@ -319,7 +319,6 @@ export default function Clients() {
             <Input placeholder="Buscar por nome..." className="pl-9 rounded-2xl"
               value={search} onChange={e => setSearch(e.target.value)} />
           </div>
-          </motion.button>
           <motion.button whileTap={{ scale: 0.97 }} onClick={() => { form.reset(); setAddOpen(true); }}
             className="flex items-center gap-2 px-4 h-10 rounded-2xl text-sm font-semibold text-white shadow-md hover:opacity-90 transition-opacity whitespace-nowrap"
             style={{ background: "linear-gradient(135deg,hsl(338,62%,38%),hsl(318,55%,32%))" }}>
