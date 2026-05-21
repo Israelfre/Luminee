@@ -12,6 +12,7 @@ import Services from "./pages/services";
 import Employees from "./pages/employees";
 import Financials from "./pages/financials";
 import Settings from "./pages/settings";
+import Reports from "./pages/reports";
 import ClientRegistration from "./pages/client-registration";
 import SalonRegister from "./pages/salon-register";
 import AdminLogin from "./pages/admin-login";
@@ -66,6 +67,7 @@ function SalonRoutes() {
           <Route path="/employees" component={Employees} />
           <Route path="/financials" component={Financials} />
           <Route path="/settings" component={Settings} />
+          <Route path="/reports" component={Reports} />
           <Route component={() => <Redirect to="/dashboard" />} />
         </Switch>
       </Layout>

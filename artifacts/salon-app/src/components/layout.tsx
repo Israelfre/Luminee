@@ -7,6 +7,7 @@ import {
   UserSquare2, 
   Wallet, 
   Settings,
+  BarChart3,
   Menu,
   X,
   Flower2,
@@ -25,6 +26,7 @@ const navItems = [
   { href: "/services", label: "Serviços", icon: Scissors },
   { href: "/employees", label: "Equipe", icon: UserSquare2 },
   { href: "/financials", label: "Financeiro", icon: Wallet },
+  { href: "/reports", label: "Relatórios", icon: BarChart3 },
   { href: "/settings", label: "Configurações", icon: Settings },
 ];
 

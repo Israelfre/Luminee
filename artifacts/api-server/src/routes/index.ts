@@ -8,6 +8,7 @@ import appointmentsRouter from "./appointments";
 import paymentsRouter from "./payments";
 import expensesRouter from "./expenses";
 import dashboardRouter from "./dashboard";
+import reportsRouter from "./reports";
 import publicRouter from "./public";
 import adminRouter from "./admin";
 import salonAuthRouter from "./salon-auth";
@@ -26,5 +27,6 @@ router.use("/appointments", appointmentsRouter);
 router.use("/payments", paymentsRouter);
 router.use("/expenses", expensesRouter);
 router.use("/dashboard", dashboardRouter);
+router.use("/reports", reportsRouter);
 
 export default router;
