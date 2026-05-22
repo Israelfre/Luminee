@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useAuth, adminHeaders, getAdminToken } from "@/contexts/auth-context";
 import { useLocation } from "wouter";
 import {
-  LogOut, Users, Plus, Link2, Pencil, Trash2,
+  LogOut, Users, Plus, Link2, Pencil, Trash2, CalendarDays,
   RefreshCw, Zap, Gift, Clock, XCircle, Eye, EyeOff,
   X, Check, Loader2, ExternalLink,
 } from "lucide-react";
@@ -275,23 +275,42 @@ export default function AdminDashboard() {
           ))}
         </div>
 
-        {/* Registration link bar */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 flex items-center gap-3">
-          <Link2 className="h-4 w-4 text-pink-500 flex-shrink-0" />
-          <div className="flex-1 min-w-0">
-            <p className="text-[11px] text-zinc-500 mb-0.5">Link de cadastro para novos salões</p>
-            <p className="text-xs text-zinc-300 font-mono truncate select-all">
-              {typeof window !== "undefined" ? `${window.location.origin}${basePath}/registrar` : `${basePath}/registrar`}
-            </p>
+        {/* Links bar */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 flex items-center gap-3">
+            <Link2 className="h-4 w-4 text-pink-500 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-[11px] text-zinc-500 mb-0.5">Link de cadastro para novos salões</p>
+              <p className="text-xs text-zinc-300 font-mono truncate select-all">
+                {typeof window !== "undefined" ? `${window.location.origin}${basePath}/registrar` : `${basePath}/registrar`}
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                const link = `${window.location.origin}${basePath}/registrar`;
+                navigator.clipboard.writeText(link).then(() => toast.success("Link copiado!"));
+              }}
+              className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-pink-600/20 text-pink-400 border border-pink-800 hover:bg-pink-600/30 transition-all">
+              <Link2 className="h-3.5 w-3.5" /> Copiar
+            </button>
           </div>
-          <button
-            onClick={() => {
-              const link = `${window.location.origin}${basePath}/registrar`;
-              navigator.clipboard.writeText(link).then(() => toast.success("Link copiado!"));
-            }}
-            className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-pink-600/20 text-pink-400 border border-pink-800 hover:bg-pink-600/30 transition-all">
-            <Link2 className="h-3.5 w-3.5" /> Copiar
-          </button>
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 flex items-center gap-3">
+            <CalendarDays className="h-4 w-4 text-emerald-500 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-[11px] text-zinc-500 mb-0.5">Link de agendamento online (por salão)</p>
+              <p className="text-xs text-zinc-300 font-mono truncate select-all">
+                {typeof window !== "undefined" ? `${window.location.origin}${basePath}/agendar?s=ID` : `${basePath}/agendar?s=ID`}
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                const link = `${window.location.origin}${basePath}/agendar`;
+                navigator.clipboard.writeText(link).then(() => toast.success("Link de agendamento copiado!"));
+              }}
+              className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600/20 text-emerald-400 border border-emerald-800 hover:bg-emerald-600/30 transition-all">
+              <Link2 className="h-3.5 w-3.5" /> Copiar
+            </button>
+          </div>
         </div>
 
         {/* Clients table */}
@@ -369,6 +388,15 @@ export default function AdminDashboard() {
                     <button onClick={() => copyLink(s.id)} title="Copiar link de cadastro"
                       className="p-2 rounded-lg text-zinc-500 hover:text-white hover:bg-zinc-700 transition-all">
                       <Link2 className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => {
+                        const link = `${window.location.origin}${basePath}/agendar?s=${s.id}`;
+                        navigator.clipboard.writeText(link).then(() => toast.success("Link de agendamento copiado!"));
+                      }}
+                      title="Copiar link de agendamento online"
+                      className="p-2 rounded-lg text-emerald-600 hover:text-white hover:bg-emerald-700 transition-all">
+                      <CalendarDays className="h-4 w-4" />
                     </button>
                     <button title="Editar" disabled
                       className="p-2 rounded-lg text-zinc-600 cursor-not-allowed">

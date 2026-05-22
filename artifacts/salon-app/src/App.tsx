@@ -13,6 +13,7 @@ import Employees from "./pages/employees";
 import Financials from "./pages/financials";
 import Settings from "./pages/settings";
 import Reports from "./pages/reports";
+import Booking from "./pages/booking";
 import ClientRegistration from "./pages/client-registration";
 import SalonRegister from "./pages/salon-register";
 import AdminLogin from "./pages/admin-login";
@@ -79,6 +80,7 @@ function Router() {
   const [location] = useLocation();
 
   if (location === "/cadastro" || location.startsWith("/cadastro?")) return <ClientRegistration />;
+  if (location === "/agendar" || location.startsWith("/agendar?")) return <Booking />;
   if (location === "/registrar") return <SalonRegister />;
   if (location === "/admin" || location.startsWith("/admin/")) return <AdminRoutes />;
 
