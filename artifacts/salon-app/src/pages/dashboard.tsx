@@ -6,21 +6,19 @@ import {
   useGetTopServices,
   getGetTopServicesQueryKey,
   useGetUpcomingAppointments,
-  getGetUpcomingAppointmentsQueryKey
+  getGetUpcomingAppointmentsQueryKey,
+  useGetSalon,
+  getGetSalonQueryKey,
 } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, TrendingUp, Users, Scissors, Loader2, Flower2, Star } from "lucide-react";
+import { Calendar, TrendingUp, Users, Scissors, Loader2, Flower2, Star, Link2 } from "lucide-react";
 import {
-  Area,
-  AreaChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
+  Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
 
 function formatCurrency(amount: string | number) {
   const num = typeof amount === 'string' ? parseFloat(amount) : amount;
@@ -28,12 +26,8 @@ function formatCurrency(amount: string | number) {
 }
 
 const statusLabel: Record<string, string> = {
-  scheduled: "Agendado",
-  confirmed: "Confirmado",
-  completed: "Concluído",
-  cancelled: "Cancelado",
+  scheduled: "Agendado", confirmed: "Confirmado", completed: "Concluído", cancelled: "Cancelado",
 };
-
 const statusStyle: Record<string, string> = {
   scheduled: "bg-amber-50 text-amber-700 border-amber-200",
   confirmed: "bg-blue-50 text-blue-700 border-blue-200",
@@ -54,12 +48,26 @@ export default function Dashboard() {
   const { data: upcomingApps } = useGetUpcomingAppointments({
     query: { queryKey: getGetUpcomingAppointmentsQueryKey() }
   });
+  const { data: salon } = useGetSalon({
+    query: { queryKey: getGetSalonQueryKey() }
+  });
+
+  const bookingLink = (salon as any)?.id
+    ? `${window.location.origin}/agendar?s=${(salon as any).id}`
+    : "";
+
+  const copyBookingLink = () => {
+    if (!bookingLink) return;
+    navigator.clipboard.writeText(bookingLink).then(() =>
+      toast.success("Link de agendamento copiado! 🔗")
+    );
+  };
 
   if (loadingSummary || loadingTrend) {
     return (
       <div className="flex h-[60vh] flex-col items-center justify-center gap-4">
         <div className="relative">
-          <div className="w-16 h-16 rounded-full opacity-20 animate-pulse" 
+          <div className="w-16 h-16 rounded-full opacity-20 animate-pulse"
             style={{ background: "linear-gradient(135deg, hsl(338,60%,38%), hsl(35,70%,58%))" }} />
           <Loader2 className="h-8 w-8 animate-spin text-primary absolute inset-0 m-auto" />
         </div>
@@ -76,52 +84,56 @@ export default function Dashboard() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <p className="text-sm text-muted-foreground capitalize mb-1">{today}</p>
-          <h1 className="text-4xl font-serif font-bold" 
+          <h1 className="text-4xl font-serif font-bold"
             style={{ background: "linear-gradient(135deg, hsl(338,60%,32%), hsl(338,55%,48%))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
             Bem-vinda de volta! ✨
           </h1>
           <p className="text-muted-foreground mt-1">Veja o que está acontecendo no seu salão hoje.</p>
         </div>
-        <div className="flex items-center gap-2 px-4 py-2 rounded-2xl border"
-          style={{ background: "linear-gradient(135deg, hsl(22,60%,97%), hsl(340,40%,96%))", borderColor: "hsl(340,25%,88%)" }}>
-          <Flower2 className="h-4 w-4 text-primary" />
-          <span className="text-sm font-medium text-primary">Tudo certo por aqui</span>
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-2 px-4 py-2 rounded-2xl border"
+            style={{ background: "linear-gradient(135deg, hsl(22,60%,97%), hsl(340,40%,96%))", borderColor: "hsl(340,25%,88%)" }}>
+            <Flower2 className="h-4 w-4 text-primary" />
+            <span className="text-sm font-medium text-primary">Tudo certo por aqui</span>
+          </div>
+          {bookingLink && (
+            <button onClick={copyBookingLink}
+              className="flex items-center gap-2 px-4 py-2 rounded-2xl border font-semibold text-sm transition-all hover:opacity-80"
+              style={{ background: "hsl(142,60%,95%)", borderColor: "hsl(142,40%,80%)", color: "hsl(142,55%,30%)" }}
+              title={bookingLink}>
+              <Link2 className="h-4 w-4" />
+              Link de agendamento
+            </button>
+          )}
         </div>
       </div>
 
       {/* KPI cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {/* Receita */}
         <div className="rounded-2xl p-5 text-white relative overflow-hidden shadow-lg"
           style={{ background: "linear-gradient(135deg, hsl(338,60%,38%) 0%, hsl(320,55%,30%) 100%)" }}>
           <div className="absolute -top-4 -right-4 w-20 h-20 rounded-full opacity-20"
             style={{ background: "radial-gradient(circle, white 0%, transparent 70%)" }} />
           <div className="flex items-start justify-between mb-4">
-            <div className="p-2 rounded-xl bg-white/15">
-              <TrendingUp className="h-5 w-5 text-white" />
-            </div>
+            <div className="p-2 rounded-xl bg-white/15"><TrendingUp className="h-5 w-5 text-white" /></div>
             <span className="text-[11px] font-semibold uppercase tracking-wider text-white/60">Receita Hoje</span>
           </div>
           <div className="text-3xl font-bold">{formatCurrency(summary?.todayRevenue || "0")}</div>
           <div className="text-xs text-white/60 mt-1.5">Mensal: {formatCurrency(summary?.monthRevenue || "0")}</div>
         </div>
 
-        {/* Agendamentos */}
         <div className="rounded-2xl p-5 text-white relative overflow-hidden shadow-lg"
           style={{ background: "linear-gradient(135deg, hsl(35,70%,52%) 0%, hsl(20,65%,48%) 100%)" }}>
           <div className="absolute -top-4 -right-4 w-20 h-20 rounded-full opacity-20"
             style={{ background: "radial-gradient(circle, white 0%, transparent 70%)" }} />
           <div className="flex items-start justify-between mb-4">
-            <div className="p-2 rounded-xl bg-white/15">
-              <Calendar className="h-5 w-5 text-white" />
-            </div>
+            <div className="p-2 rounded-xl bg-white/15"><Calendar className="h-5 w-5 text-white" /></div>
             <span className="text-[11px] font-semibold uppercase tracking-wider text-white/60">Agendamentos</span>
           </div>
           <div className="text-3xl font-bold">{summary?.todayAppointments || 0}</div>
           <div className="text-xs text-white/60 mt-1.5">{summary?.completedToday || 0} concluídos hoje</div>
         </div>
 
-        {/* Clientes */}
         <Card className="bella-card-glow border-border/50 shadow-sm">
           <CardContent className="p-5">
             <div className="flex items-start justify-between mb-4">
@@ -135,7 +147,6 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* Equipe */}
         <Card className="bella-card-glow border-border/50 shadow-sm">
           <CardContent className="p-5">
             <div className="flex items-start justify-between mb-4">
@@ -152,7 +163,6 @@ export default function Dashboard() {
 
       {/* Charts row */}
       <div className="grid gap-6 lg:grid-cols-7">
-        {/* Revenue chart */}
         <Card className="lg:col-span-4 border-border/50 shadow-sm overflow-hidden">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
@@ -173,36 +183,28 @@ export default function Dashboard() {
                       <stop offset="95%" stopColor="hsl(338,60%,38%)" stopOpacity={0}/>
                     </linearGradient>
                   </defs>
-                  <XAxis 
-                    dataKey="date" 
+                  <XAxis dataKey="date"
                     tickFormatter={(val) => format(new Date(val), 'd MMM', { locale: ptBR })}
                     axisLine={false} tickLine={false}
-                    tick={{ fill: 'hsl(338,18%,48%)', fontSize: 11 }} dy={8}
-                  />
-                  <YAxis 
-                    tickFormatter={(val) => `R$${val}`}
+                    tick={{ fill: 'hsl(338,18%,48%)', fontSize: 11 }} dy={8} />
+                  <YAxis tickFormatter={(val) => `R$${val}`}
                     axisLine={false} tickLine={false}
-                    tick={{ fill: 'hsl(338,18%,48%)', fontSize: 11 }} dx={-6}
-                  />
-                  <Tooltip 
+                    tick={{ fill: 'hsl(338,18%,48%)', fontSize: 11 }} dx={-6} />
+                  <Tooltip
                     formatter={(value: any) => [formatCurrency(value), "Receita"]}
                     labelFormatter={(label) => format(new Date(label), "d 'de' MMMM", { locale: ptBR })}
-                    contentStyle={{ borderRadius: '12px', border: '1px solid hsl(340,25%,90%)', boxShadow: '0 8px 24px rgba(160,60,90,0.12)', fontFamily: 'Nunito, sans-serif', fontSize: 13 }}
-                  />
-                  <Area 
-                    type="monotone" dataKey="revenue" 
+                    contentStyle={{ borderRadius: '12px', border: '1px solid hsl(340,25%,90%)', boxShadow: '0 8px 24px rgba(160,60,90,0.12)', fontFamily: 'Nunito, sans-serif', fontSize: 13 }} />
+                  <Area type="monotone" dataKey="revenue"
                     stroke="hsl(338,60%,38%)" strokeWidth={2.5}
-                    fillOpacity={1} fill="url(#colorRevenue)" 
+                    fillOpacity={1} fill="url(#colorRevenue)"
                     dot={{ fill: 'hsl(338,60%,38%)', strokeWidth: 0, r: 4 }}
-                    activeDot={{ r: 6, fill: 'hsl(338,60%,38%)', stroke: 'white', strokeWidth: 2 }}
-                  />
+                    activeDot={{ r: 6, fill: 'hsl(338,60%,38%)', stroke: 'white', strokeWidth: 2 }} />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
           </CardContent>
         </Card>
 
-        {/* Top services */}
         <Card className="lg:col-span-3 border-border/50 shadow-sm">
           <CardHeader className="pb-4">
             <CardTitle className="font-serif text-xl">Serviços em Alta</CardTitle>
@@ -220,10 +222,7 @@ export default function Dashboard() {
                     <div className="flex items-center gap-1 mt-0.5">
                       <div className="h-1.5 rounded-full flex-1 overflow-hidden" style={{ background: "hsl(340,25%,92%)" }}>
                         <div className="h-full rounded-full transition-all duration-700"
-                          style={{ 
-                            width: `${Math.min(100, (service.count / (topServices[0]?.count || 1)) * 100)}%`,
-                            background: "linear-gradient(90deg, hsl(338,60%,38%), hsl(35,70%,52%))"
-                          }} />
+                          style={{ width: `${Math.min(100, (service.count / (topServices[0]?.count || 1)) * 100)}%`, background: "linear-gradient(90deg, hsl(338,60%,38%), hsl(35,70%,52%))" }} />
                       </div>
                       <span className="text-[11px] text-muted-foreground whitespace-nowrap">{service.count}x</span>
                     </div>
@@ -247,15 +246,13 @@ export default function Dashboard() {
         <CardHeader className="border-b border-border/40 pb-4">
           <div className="flex items-center justify-between">
             <CardTitle className="font-serif text-xl">Próximos Atendimentos</CardTitle>
-            <Badge variant="outline" className="text-xs font-medium border-primary/30 text-primary bg-primary/5">
-              Hoje
-            </Badge>
+            <Badge variant="outline" className="text-xs font-medium border-primary/30 text-primary bg-primary/5">Hoje</Badge>
           </div>
         </CardHeader>
         <CardContent className="p-0">
           {upcomingApps && upcomingApps.length > 0 ? (
             <div className="divide-y divide-border/40">
-              {upcomingApps.map((app, idx) => (
+              {upcomingApps.map((app) => (
                 <div key={app.id} className="flex items-center gap-4 px-6 py-4 hover:bg-muted/30 transition-colors">
                   <div className="flex-shrink-0 w-14 text-center">
                     <div className="text-xs text-muted-foreground">{format(new Date(app.startsAt), 'a', { locale: ptBR })}</div>
