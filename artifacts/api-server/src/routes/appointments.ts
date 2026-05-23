@@ -66,8 +66,8 @@ router.get("/", requireSalon, async (req: Request, res: Response) => {
 
   const conditions = [eq(appointmentsTable.salonId, salonId)];
   if (date) {
-    const dayStart = new Date(date as string + "T00:00:00Z");
-    const dayEnd = new Date(date as string + "T23:59:59Z");
+    const dayStart = new Date(date as string + "T00:00:00-03:00");
+    const dayEnd = new Date(date as string + "T23:59:59-03:00");
     conditions.push(gte(appointmentsTable.startsAt, dayStart));
     conditions.push(lte(appointmentsTable.startsAt, dayEnd));
   }

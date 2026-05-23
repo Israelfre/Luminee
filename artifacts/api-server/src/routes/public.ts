@@ -97,8 +97,8 @@ router.get("/booking/:salonId/slots", async (req: Request, res: Response) => {
     totalDuration = service.durationMinutes;
   }
 
-  const dayStart = new Date(`${date}T00:00:00`);
-  const dayEnd = new Date(`${date}T23:59:59`);
+  const dayStart = new Date(`${date}T00:00:00-03:00`);
+  const dayEnd = new Date(`${date}T23:59:59-03:00`);
 
   const existing = await db.select({
     startsAt: appointmentsTable.startsAt,
@@ -116,7 +116,7 @@ router.get("/booking/:salonId/slots", async (req: Request, res: Response) => {
   for (let hour = openHour; hour < closeHour || (hour === closeHour && 0 < closeMin); hour++) {
     for (let min = (hour === openHour ? openMin : 0); min < 60; min += 30) {
       const timeStr = `${String(hour).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
-      const slotStart = new Date(`${date}T${timeStr}:00`);
+      const slotStart = new Date(`${date}T${timeStr}:00-03:00`);
       const slotEnd = new Date(slotStart.getTime() + totalDuration * 60 * 1000);
 
       // Não mostra horários no passado
@@ -186,7 +186,8 @@ router.post("/booking/:salonId/book", async (req: Request, res: Response) => {
 
   const totalDuration = servicesList.reduce((s, sv) => s + sv.durationMinutes, 0);
   const totalPrice = servicesList.reduce((s, sv) => s + parseFloat(sv.price), 0);
-  const startsAt = new Date(`${date}T${time}:00`);
+  // Cria a data no horário de Brasília (UTC-3)
+  const startsAt = new Date(`${date}T${time}:00-03:00`);
   const endsAt = new Date(startsAt.getTime() + totalDuration * 60 * 1000);
 
   // Verifica conflito
