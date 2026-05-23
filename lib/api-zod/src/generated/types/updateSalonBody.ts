@@ -6,6 +6,12 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export interface BusinessHourSlot {
+  open: string;
+  close: string;
+  enabled: boolean;
+}
+
 export interface UpdateSalonBody {
   name?: string;
   logoUrl?: string;
@@ -16,4 +22,5 @@ export interface UpdateSalonBody {
   whatsapp?: string;
   primaryColor?: string;
   secondaryColor?: string;
+  businessHours?: Record<string, BusinessHourSlot>;
 }

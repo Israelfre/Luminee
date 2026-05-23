@@ -5,7 +5,7 @@ import {
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Loader2, Store, MapPin, Phone, Mail, Instagram, MessageCircle, Flower2, Upload, X, Palette, Check, Sparkles, RefreshCw } from "lucide-react";
+import { Loader2, Store, MapPin, Phone, Mail, Instagram, MessageCircle, Flower2, Upload, X, Palette, Check, Sparkles, RefreshCw, Clock } from "lucide-react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -51,6 +51,28 @@ export default function Settings() {
   const [localSecondary, setLocalSecondary] = useState(customSecondaryHex);
   const [livePreview, setLivePreview] = useState(false);
 
+  const DAYS = [
+    { key: "monday", label: "Segunda-feira" },
+    { key: "tuesday", label: "Terça-feira" },
+    { key: "wednesday", label: "Quarta-feira" },
+    { key: "thursday", label: "Quinta-feira" },
+    { key: "friday", label: "Sexta-feira" },
+    { key: "saturday", label: "Sábado" },
+    { key: "sunday", label: "Domingo" },
+  ];
+
+  const defaultHours = {
+    monday:    { open: "08:00", close: "18:00", enabled: true },
+    tuesday:   { open: "08:00", close: "18:00", enabled: true },
+    wednesday: { open: "08:00", close: "18:00", enabled: true },
+    thursday:  { open: "08:00", close: "18:00", enabled: true },
+    friday:    { open: "08:00", close: "18:00", enabled: true },
+    saturday:  { open: "08:00", close: "14:00", enabled: true },
+    sunday:    { open: "08:00", close: "12:00", enabled: false },
+  };
+
+  const [businessHours, setBusinessHours] = useState<Record<string, { open: string; close: string; enabled: boolean }>>(defaultHours);
+
   useEffect(() => {
     setLocalPrimary(customPrimaryHex);
     setLocalSecondary(customSecondaryHex);
@@ -72,6 +94,7 @@ export default function Settings() {
         address: salon.address || "", instagram: salon.instagram || "", whatsapp: salon.whatsapp || "",
       });
       if (salon.logoUrl) setPreviewLogo(salon.logoUrl);
+      if ((salon as any).businessHours) setBusinessHours((salon as any).businessHours);
     }
   }, [salon, form]);
 
@@ -525,6 +548,47 @@ export default function Settings() {
                       <FormMessage />
                     </FormItem>
                   )} />
+                </div>
+              </div>
+
+              <Separator style={{ borderColor: "hsl(var(--primary) / 0.08)" }} />
+
+              {/* Horários de Funcionamento */}
+              <div>
+                <h3 className="font-serif text-lg font-bold mb-1 flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-primary" /> Horários de Funcionamento
+                </h3>
+                <p className="text-xs text-muted-foreground mb-4">Define os dias e horários em que o salão aceita agendamentos online.</p>
+                <div className="space-y-3">
+                  {DAYS.map(({ key, label }) => {
+                    const h = businessHours[key] ?? { open: "08:00", close: "18:00", enabled: false };
+                    return (
+                      <div key={key} className="flex items-center gap-3 p-3 rounded-2xl border" style={{ borderColor: "hsl(340,20%,90%)", background: h.enabled ? "hsl(338,60%,98%)" : "hsl(0,0%,98%)" }}>
+                        <button type="button" onClick={() => setBusinessHours(prev => ({ ...prev, [key]: { ...prev[key], enabled: !h.enabled } }))}
+                          className="w-10 h-6 rounded-full transition-all flex-shrink-0 relative"
+                          style={{ background: h.enabled ? "hsl(338,62%,38%)" : "hsl(340,10%,80%)" }}>
+                          <span className="absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all"
+                            style={{ left: h.enabled ? "calc(100% - 20px)" : "4px" }} />
+                        </button>
+                        <span className="text-sm font-medium w-32 flex-shrink-0" style={{ color: h.enabled ? "hsl(338,62%,30%)" : "hsl(0,0%,60%)" }}>{label}</span>
+                        {h.enabled ? (
+                          <div className="flex items-center gap-2 flex-1">
+                            <input type="time" value={h.open}
+                              onChange={e => setBusinessHours(prev => ({ ...prev, [key]: { ...prev[key], open: e.target.value } }))}
+                              className="px-3 py-1.5 rounded-xl border text-sm outline-none"
+                              style={{ borderColor: "hsl(340,20%,88%)" }} />
+                            <span className="text-xs text-muted-foreground">até</span>
+                            <input type="time" value={h.close}
+                              onChange={e => setBusinessHours(prev => ({ ...prev, [key]: { ...prev[key], close: e.target.value } }))}
+                              className="px-3 py-1.5 rounded-xl border text-sm outline-none"
+                              style={{ borderColor: "hsl(340,20%,88%)" }} />
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground italic">Fechado</span>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 

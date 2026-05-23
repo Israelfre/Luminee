@@ -1,6 +1,10 @@
-import { pgTable, text, serial, timestamp, date } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, date, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
+
+export interface BusinessHours {
+  [day: string]: { open: string; close: string; enabled: boolean };
+}
 
 export const salonsTable = pgTable("salons", {
   id: serial("id").primaryKey(),
@@ -13,11 +17,12 @@ export const salonsTable = pgTable("salons", {
   instagram: text("instagram"),
   whatsapp: text("whatsapp"),
   password: text("password"),
-  passwordPlain: text("password_plain"), // senha em texto puro para o admin visualizar
+  passwordPlain: text("password_plain"),
   plan: text("plan").notNull().default("gratuito"),
   planExpiresAt: date("plan_expires_at"),
   primaryColor: text("primary_color"),
   secondaryColor: text("secondary_color"),
+  businessHours: jsonb("business_hours").$type<BusinessHours>(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

@@ -68,6 +68,26 @@ router.get("/booking/:salonId/slots", async (req: Request, res: Response) => {
     return;
   }
 
+  // Busca o salão para pegar os horários de funcionamento
+  const [salon] = await db.select().from(salonsTable).where(eq(salonsTable.id, salonId)).limit(1);
+  if (!salon) { res.status(404).json({ error: "Salão não encontrado" }); return; }
+
+  // Descobre o dia da semana
+  const dayOfWeek = new Date(`${date}T12:00:00`).toLocaleDateString("en-US", { weekday: "long" }).toLowerCase();
+  const bh = (salon.businessHours as any)?.[dayOfWeek];
+
+  // Se o dia está desabilitado ou não tem horário configurado, retorna vazio
+  if (bh && !bh.enabled) {
+    res.json([]);
+    return;
+  }
+
+  // Define os limites do dia com base nos horários de funcionamento
+  const openTime = bh?.open ?? "08:00";
+  const closeTime = bh?.close ?? "19:00";
+  const [openHour, openMin] = openTime.split(":").map(Number);
+  const [closeHour, closeMin] = closeTime.split(":").map(Number);
+
   // Usa duration customizada (múltiplos serviços) ou busca do serviço
   let totalDuration = duration ? parseInt(duration) : 0;
   if (!totalDuration) {
@@ -93,8 +113,8 @@ router.get("/booking/:salonId/slots", async (req: Request, res: Response) => {
   const slots: { time: string; available: boolean }[] = [];
   const now = new Date();
 
-  for (let hour = 8; hour < 19; hour++) {
-    for (let min = 0; min < 60; min += 30) {
+  for (let hour = openHour; hour < closeHour || (hour === closeHour && 0 < closeMin); hour++) {
+    for (let min = (hour === openHour ? openMin : 0); min < 60; min += 30) {
       const timeStr = `${String(hour).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
       const slotStart = new Date(`${date}T${timeStr}:00`);
       const slotEnd = new Date(slotStart.getTime() + totalDuration * 60 * 1000);
@@ -102,8 +122,9 @@ router.get("/booking/:salonId/slots", async (req: Request, res: Response) => {
       // Não mostra horários no passado
       if (slotStart <= now) continue;
 
-      // Não mostra slots que terminam depois das 20h
-      if (slotEnd.getHours() >= 20) continue;
+      // Não mostra slots que terminam depois do horário de fechamento
+      const closeLimit = new Date(`${date}T${closeTime}:00`);
+      if (slotEnd > closeLimit) continue;
 
       const conflict = existing.some(e => {
         const eStart = new Date(e.startsAt);
