@@ -4,7 +4,7 @@ import { format, addDays, startOfDay, isToday, isTomorrow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   Flower2, ChevronRight, ChevronLeft, Check, Loader2,
-  Scissors, User, Calendar, Clock, Phone, Mail, ArrowLeft,
+  Scissors, User, Calendar, Clock, Phone, Mail, Plus, X, Trash2,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { API_PREFIX } from "@/lib/api-url";
@@ -15,7 +15,7 @@ interface SalonInfo { id: number; name: string; logoUrl?: string | null }
 interface Service { id: number; name: string; description?: string | null; price: string; durationMinutes: number; category: string }
 interface Employee { id: number; name: string; specialties: string[] }
 interface Slot { time: string; available: boolean }
-interface BookingResult { ok: boolean; appointment: { date: string; time: string; serviceName: string; employeeName: string; clientName: string } }
+interface BookingResult { ok: boolean; appointment: { date: string; time: string; services: string; employeeName: string; clientName: string; totalPrice: string } }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const fmt$ = (v: string | number) =>
@@ -23,9 +23,8 @@ const fmt$ = (v: string | number) =>
 
 const api = (path: string) => fetch(`${API_PREFIX}/public/${path}`).then(r => r.json());
 
-const STEPS = ["Serviço", "Profissional", "Data & Hora", "Seus Dados", "Confirmado"];
+const STEPS = ["Serviços", "Profissional", "Data & Hora", "Seus Dados", "Confirmado"];
 
-// ─── Main ─────────────────────────────────────────────────────────────────────
 export default function Booking() {
   const params = new URLSearchParams(window.location.search);
   const salonId = params.get("s") ?? "1";
@@ -39,7 +38,7 @@ export default function Booking() {
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<BookingResult | null>(null);
 
-  const [selectedService, setSelectedService] = useState<Service | null>(null);
+  const [selectedServices, setSelectedServices] = useState<Service[]>([]);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date>(addDays(new Date(), 1));
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
@@ -52,15 +51,27 @@ export default function Booking() {
     api(`booking/${salonId}/employees`).then(setEmployees);
   }, [salonId]);
 
+  const totalDuration = selectedServices.reduce((s, sv) => s + sv.durationMinutes, 0);
+  const totalPrice = selectedServices.reduce((s, sv) => s + parseFloat(sv.price), 0);
+
   useEffect(() => {
-    if (!selectedService || !selectedEmployee) return;
+    if (!selectedEmployee || selectedServices.length === 0) return;
     setLoadingSlots(true);
     setSelectedTime(null);
     const dateStr = format(selectedDate, "yyyy-MM-dd");
-    api(`booking/${salonId}/slots?date=${dateStr}&serviceId=${selectedService.id}&employeeId=${selectedEmployee.id}`)
+    // Usa o primeiro serviço para calcular slots, mas manda duração total
+    api(`booking/${salonId}/slots?date=${dateStr}&serviceId=${selectedServices[0].id}&employeeId=${selectedEmployee.id}&duration=${totalDuration}`)
       .then(setSlots)
       .finally(() => setLoadingSlots(false));
-  }, [selectedDate, selectedService, selectedEmployee]);
+  }, [selectedDate, selectedServices, selectedEmployee]);
+
+  const toggleService = (s: Service) => {
+    setSelectedServices(prev =>
+      prev.find(x => x.id === s.id)
+        ? prev.filter(x => x.id !== s.id)
+        : [...prev, s]
+    );
+  };
 
   const validate = () => {
     const e: Record<string, string> = {};
@@ -81,7 +92,8 @@ export default function Booking() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           clientName: form.name, clientPhone: form.phone, clientEmail: form.email,
-          serviceId: selectedService!.id, employeeId: selectedEmployee!.id,
+          serviceIds: selectedServices.map(s => s.id),
+          employeeId: selectedEmployee!.id,
           date: format(selectedDate, "yyyy-MM-dd"), time: selectedTime,
         }),
       });
@@ -93,8 +105,7 @@ export default function Booking() {
     finally { setSubmitting(false); }
   };
 
-  // Gera próximos 14 dias
-  const dates = Array.from({ length: 14 }, (_, i) => addDays(startOfDay(new Date()), i + 0));
+  const dates = Array.from({ length: 14 }, (_, i) => addDays(startOfDay(new Date()), i));
 
   const labelDate = (d: Date) => {
     if (isToday(d)) return "Hoje";
@@ -103,7 +114,7 @@ export default function Booking() {
   };
 
   const canNext = [
-    !!selectedService,
+    selectedServices.length > 0,
     !!selectedEmployee,
     !!selectedTime,
     true,
@@ -122,8 +133,6 @@ export default function Booking() {
             <p className="text-xs text-muted-foreground mt-0.5">Agendar horário</p>
           </div>
         </div>
-
-        {/* Progress */}
         {step < 4 && (
           <div className="max-w-2xl mx-auto px-4 pb-3">
             <div className="flex gap-1">
@@ -140,32 +149,68 @@ export default function Booking() {
       <div className="max-w-2xl mx-auto px-4 py-6">
         <AnimatePresence mode="wait">
 
-          {/* STEP 0 — Serviço */}
+          {/* STEP 0 — Serviços (múltipla seleção) */}
           {step === 0 && (
             <motion.div key="service" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-              <h2 className="font-serif text-2xl font-bold mb-4" style={{ color: "hsl(338,62%,30%)" }}>Escolha o serviço</h2>
+              <h2 className="font-serif text-2xl font-bold mb-1" style={{ color: "hsl(338,62%,30%)" }}>Escolha os serviços</h2>
+              <p className="text-sm text-muted-foreground mb-4">Você pode selecionar mais de um serviço.</p>
+
               <div className="space-y-3">
-                {services.map(s => (
-                  <motion.button key={s.id} whileTap={{ scale: 0.98 }}
-                    onClick={() => setSelectedService(s)}
-                    className="w-full text-left p-4 rounded-2xl border-2 transition-all"
-                    style={selectedService?.id === s.id
-                      ? { borderColor: "hsl(338,62%,38%)", background: "hsl(338,62%,97%)" }
-                      : { borderColor: "hsl(340,20%,90%)", background: "white" }}>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-semibold">{s.name}</p>
-                        {s.description && <p className="text-sm text-muted-foreground mt-0.5">{s.description}</p>}
-                        <p className="text-xs text-muted-foreground mt-1">{s.durationMinutes} min</p>
+                {services.map(s => {
+                  const selected = !!selectedServices.find(x => x.id === s.id);
+                  return (
+                    <motion.button key={s.id} whileTap={{ scale: 0.98 }}
+                      onClick={() => toggleService(s)}
+                      className="w-full text-left p-4 rounded-2xl border-2 transition-all"
+                      style={selected
+                        ? { borderColor: "hsl(338,62%,38%)", background: "hsl(338,62%,97%)" }
+                        : { borderColor: "hsl(340,20%,90%)", background: "white" }}>
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <p className="font-semibold">{s.name}</p>
+                          {s.description && <p className="text-sm text-muted-foreground mt-0.5">{s.description}</p>}
+                          <p className="text-xs text-muted-foreground mt-1">{s.durationMinutes} min</p>
+                        </div>
+                        <div className="text-right flex-shrink-0 ml-4 flex flex-col items-end gap-1">
+                          <p className="font-bold text-lg" style={{ color: "hsl(338,62%,38%)" }}>{fmt$(s.price)}</p>
+                          <div className="w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all"
+                            style={selected ? { background: "hsl(338,62%,38%)", borderColor: "hsl(338,62%,38%)" } : { borderColor: "hsl(340,20%,80%)" }}>
+                            {selected && <Check className="h-3.5 w-3.5 text-white" />}
+                          </div>
+                        </div>
                       </div>
-                      <div className="text-right flex-shrink-0 ml-4">
-                        <p className="font-bold text-lg" style={{ color: "hsl(338,62%,38%)" }}>{fmt$(s.price)}</p>
-                        {selectedService?.id === s.id && <Check className="h-5 w-5 ml-auto mt-1" style={{ color: "hsl(338,62%,38%)" }} />}
-                      </div>
-                    </div>
-                  </motion.button>
-                ))}
+                    </motion.button>
+                  );
+                })}
               </div>
+
+              {/* Resumo de serviços selecionados */}
+              {selectedServices.length > 0 && (
+                <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+                  className="mt-4 p-4 rounded-2xl" style={{ background: "hsl(338,60%,97%)", border: "1px solid hsl(338,40%,90%)" }}>
+                  <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">Selecionados</p>
+                  <div className="space-y-1">
+                    {selectedServices.map(s => (
+                      <div key={s.id} className="flex items-center justify-between text-sm">
+                        <span className="flex items-center gap-1.5">
+                          <Scissors className="h-3 w-3 text-primary" />{s.name}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted-foreground">{s.durationMinutes}min</span>
+                          <span className="font-semibold">{fmt$(s.price)}</span>
+                          <button onClick={() => toggleService(s)} className="text-muted-foreground hover:text-red-500">
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="border-t mt-2 pt-2 flex justify-between text-sm font-bold" style={{ borderColor: "hsl(338,40%,88%)" }}>
+                    <span>Total · {totalDuration}min</span>
+                    <span style={{ color: "hsl(338,62%,38%)" }}>{fmt$(totalPrice)}</span>
+                  </div>
+                </motion.div>
+              )}
             </motion.div>
           )}
 
@@ -187,9 +232,7 @@ export default function Booking() {
                     </div>
                     <div className="flex-1">
                       <p className="font-semibold">{e.name}</p>
-                      {e.specialties.length > 0 && (
-                        <p className="text-xs text-muted-foreground mt-0.5">{e.specialties.join(", ")}</p>
-                      )}
+                      {e.specialties.length > 0 && <p className="text-xs text-muted-foreground mt-0.5">{e.specialties.join(", ")}</p>}
                     </div>
                     {selectedEmployee?.id === e.id && <Check className="h-5 w-5" style={{ color: "hsl(338,62%,38%)" }} />}
                   </motion.button>
@@ -201,9 +244,9 @@ export default function Booking() {
           {/* STEP 2 — Data & Hora */}
           {step === 2 && (
             <motion.div key="datetime" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-              <h2 className="font-serif text-2xl font-bold mb-4" style={{ color: "hsl(338,62%,30%)" }}>Escolha a data e horário</h2>
+              <h2 className="font-serif text-2xl font-bold mb-1" style={{ color: "hsl(338,62%,30%)" }}>Data e horário</h2>
+              <p className="text-sm text-muted-foreground mb-4">Duração total: <b>{totalDuration} min</b></p>
 
-              {/* Date picker */}
               <div className="flex gap-2 overflow-x-auto pb-2 mb-5">
                 {dates.map(d => (
                   <motion.button key={d.toISOString()} whileTap={{ scale: 0.95 }}
@@ -219,19 +262,20 @@ export default function Booking() {
                 ))}
               </div>
 
-              {/* Time slots */}
               {loadingSlots ? (
                 <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
               ) : (
                 <div className="grid grid-cols-4 gap-2">
-                  {slots.length === 0 && <p className="col-span-4 text-center text-muted-foreground py-8 text-sm">Nenhum horário disponível nesta data</p>}
+                  {slots.filter(s => s.available).length === 0 && (
+                    <p className="col-span-4 text-center text-muted-foreground py-8 text-sm">Nenhum horário disponível nesta data</p>
+                  )}
                   {slots.map(s => (
                     <motion.button key={s.time} whileTap={{ scale: 0.95 }}
                       disabled={!s.available}
                       onClick={() => s.available && setSelectedTime(s.time)}
                       className="py-2.5 rounded-2xl text-sm font-semibold border-2 transition-all"
                       style={!s.available
-                        ? { borderColor: "transparent", background: "hsl(340,10%,94%)", color: "hsl(340,10%,70%)", textDecoration: "line-through" }
+                        ? { borderColor: "transparent", background: "hsl(340,10%,94%)", color: "hsl(340,10%,75%)", cursor: "not-allowed" }
                         : selectedTime === s.time
                           ? { borderColor: "hsl(338,62%,38%)", background: "hsl(338,62%,38%)", color: "white" }
                           : { borderColor: "hsl(340,20%,90%)", background: "white", color: "hsl(338,62%,30%)" }}>
@@ -243,15 +287,21 @@ export default function Booking() {
             </motion.div>
           )}
 
-          {/* STEP 3 — Dados da cliente */}
+          {/* STEP 3 — Dados */}
           {step === 3 && (
             <motion.div key="data" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
               <h2 className="font-serif text-2xl font-bold mb-2" style={{ color: "hsl(338,62%,30%)" }}>Seus dados</h2>
-              <p className="text-sm text-muted-foreground mb-5">Confirme seus dados para finalizar o agendamento.</p>
+              <p className="text-sm text-muted-foreground mb-5">Confirme seus dados para finalizar.</p>
 
               {/* Resumo */}
               <div className="p-4 rounded-2xl mb-5 space-y-2 text-sm" style={{ background: "hsl(338,60%,97%)", border: "1px solid hsl(338,40%,90%)" }}>
-                <div className="flex gap-2"><Scissors className="h-4 w-4 text-primary mt-0.5" /><span><b>{selectedService?.name}</b> · {fmt$(selectedService?.price ?? "0")} · {selectedService?.durationMinutes}min</span></div>
+                <div className="flex gap-2">
+                  <Scissors className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                  <div>
+                    {selectedServices.map(s => <p key={s.id}><b>{s.name}</b> · {fmt$(s.price)}</p>)}
+                    <p className="text-muted-foreground text-xs mt-0.5">Total: {fmt$(totalPrice)} · {totalDuration}min</p>
+                  </div>
+                </div>
                 <div className="flex gap-2"><User className="h-4 w-4 text-primary mt-0.5" /><span>{selectedEmployee?.name}</span></div>
                 <div className="flex gap-2"><Calendar className="h-4 w-4 text-primary mt-0.5" /><span>{format(selectedDate, "dd/MM/yyyy (EEEE)", { locale: ptBR })}</span></div>
                 <div className="flex gap-2"><Clock className="h-4 w-4 text-primary mt-0.5" /><span>{selectedTime}</span></div>
@@ -291,8 +341,7 @@ export default function Booking() {
 
           {/* STEP 4 — Confirmado */}
           {step === 4 && result && (
-            <motion.div key="done" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-              className="text-center py-10">
+            <motion.div key="done" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="text-center py-10">
               <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.2, type: "spring" }}
                 className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-5"
                 style={{ background: "linear-gradient(135deg,hsl(142,60%,38%),hsl(162,55%,32%))" }}>
@@ -300,17 +349,18 @@ export default function Booking() {
               </motion.div>
               <h2 className="font-serif text-3xl font-bold mb-2" style={{ color: "hsl(338,62%,30%)" }}>Agendado!</h2>
               <p className="text-muted-foreground mb-6">Seu horário foi confirmado com sucesso.</p>
-
               <div className="text-left p-5 rounded-3xl space-y-3 text-sm max-w-sm mx-auto"
                 style={{ background: "white", border: "1px solid hsl(340,20%,90%)" }}>
-                <div className="flex gap-2"><Scissors className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" /><span><b>{result.appointment.serviceName}</b></span></div>
+                <div className="flex gap-2"><Scissors className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" /><span><b>{result.appointment.services}</b></span></div>
                 <div className="flex gap-2"><User className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" /><span>{result.appointment.employeeName}</span></div>
                 <div className="flex gap-2"><Calendar className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" /><span>{result.appointment.date}</span></div>
                 <div className="flex gap-2"><Clock className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" /><span>{result.appointment.time}</span></div>
+                <div className="border-t pt-2 font-bold flex justify-between" style={{ borderColor: "hsl(340,20%,90%)" }}>
+                  <span>Total</span><span style={{ color: "hsl(338,62%,38%)" }}>{result.appointment.totalPrice}</span>
+                </div>
               </div>
-
               <motion.button whileTap={{ scale: 0.97 }}
-                onClick={() => { setStep(0); setSelectedService(null); setSelectedEmployee(null); setSelectedTime(null); setResult(null); setForm({ name: "", phone: "", email: "" }); }}
+                onClick={() => { setStep(0); setSelectedServices([]); setSelectedEmployee(null); setSelectedTime(null); setResult(null); setForm({ name: "", phone: "", email: "" }); }}
                 className="mt-6 px-6 py-3 rounded-2xl text-sm font-semibold text-white"
                 style={{ background: "linear-gradient(135deg,hsl(338,62%,38%),hsl(318,55%,32%))" }}>
                 Fazer outro agendamento
@@ -320,7 +370,6 @@ export default function Booking() {
 
         </AnimatePresence>
 
-        {/* Navigation buttons */}
         {step < 4 && (
           <div className="flex gap-3 mt-8">
             {step > 0 && (
@@ -333,7 +382,7 @@ export default function Booking() {
             {step < 3 ? (
               <motion.button whileTap={{ scale: 0.97 }} onClick={() => canNext[step] && setStep(s => s + 1)}
                 disabled={!canNext[step]}
-                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-semibold text-white transition-opacity"
+                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-semibold text-white"
                 style={{ background: "linear-gradient(135deg,hsl(338,62%,38%),hsl(318,55%,32%))", opacity: canNext[step] ? 1 : 0.4 }}>
                 Continuar <ChevronRight className="h-4 w-4" />
               </motion.button>
