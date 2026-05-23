@@ -6,13 +6,8 @@ import { requireSalon } from "../middlewares/requireAuth";
 const router = Router();
 type AuthRequest = Request & { salonId: number };
 
-// Receita combinada (payments + appointments pagos)
+// Receita: usa apenas appointments com paymentStatus = paid (evita duplicação)
 async function getRevenue(salonId: number, from: Date, to: Date) {
-  const [fromPayments] = await db
-    .select({ total: sum(paymentsTable.amount) })
-    .from(paymentsTable)
-    .where(and(eq(paymentsTable.salonId, salonId), gte(paymentsTable.paidAt, from), lte(paymentsTable.paidAt, to)));
-
   const [fromApts] = await db
     .select({ total: sum(appointmentsTable.paymentAmount) })
     .from(appointmentsTable)
@@ -23,7 +18,7 @@ async function getRevenue(salonId: number, from: Date, to: Date) {
       lte(appointmentsTable.startsAt, to),
     ));
 
-  return parseFloat(fromPayments.total ?? "0") + parseFloat(fromApts.total ?? "0");
+  return parseFloat(fromApts.total ?? "0");
 }
 
 // GET /api/reports/financial?from=2026-01-01&to=2026-01-31
