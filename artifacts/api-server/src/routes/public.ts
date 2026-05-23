@@ -1,7 +1,7 @@
 import { Router, Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import { db, clientsTable, salonsTable, servicesTable, employeesTable, appointmentsTable } from "@workspace/db";
-import { eq, and, gte, lte } from "drizzle-orm";
+import { eq, and, gte, lte, inArray } from "drizzle-orm";
 
 const router = Router();
 
@@ -33,8 +33,6 @@ router.post("/salon-auth/login", async (req: Request, res: Response) => {
   res.json({ ok: true, salonId: salon.id, name: salon.name, sessionId: req.sessionID });
 });
 
-// ─── Agendamento online público ───────────────────────────────────────────────
-
 // GET /api/public/booking/:salonId/services
 router.get("/booking/:salonId/services", async (req: Request, res: Response) => {
   const salonId = parseInt(req.params.salonId);
@@ -58,42 +56,54 @@ router.get("/booking/:salonId/employees", async (req: Request, res: Response) =>
   })));
 });
 
-// GET /api/public/booking/:salonId/slots?date=2026-05-21&serviceId=1&employeeId=2
+// GET /api/public/booking/:salonId/slots?date=2026-05-21&serviceId=1&employeeId=2&duration=60
 router.get("/booking/:salonId/slots", async (req: Request, res: Response) => {
   const salonId = parseInt(req.params.salonId);
-  const { date, serviceId, employeeId } = req.query as { date: string; serviceId: string; employeeId: string };
+  const { date, serviceId, employeeId, duration } = req.query as {
+    date: string; serviceId: string; employeeId: string; duration?: string;
+  };
 
   if (!date || !serviceId || !employeeId) {
     res.status(400).json({ error: "date, serviceId e employeeId são obrigatórios" });
     return;
   }
 
-  const [service] = await db.select().from(servicesTable)
-    .where(and(eq(servicesTable.id, parseInt(serviceId)), eq(servicesTable.salonId, salonId))).limit(1);
-  if (!service) { res.status(404).json({ error: "Serviço não encontrado" }); return; }
+  // Usa duration customizada (múltiplos serviços) ou busca do serviço
+  let totalDuration = duration ? parseInt(duration) : 0;
+  if (!totalDuration) {
+    const [service] = await db.select().from(servicesTable)
+      .where(and(eq(servicesTable.id, parseInt(serviceId)), eq(servicesTable.salonId, salonId))).limit(1);
+    if (!service) { res.status(404).json({ error: "Serviço não encontrado" }); return; }
+    totalDuration = service.durationMinutes;
+  }
 
   const dayStart = new Date(`${date}T00:00:00`);
   const dayEnd = new Date(`${date}T23:59:59`);
 
-  const existing = await db.select({ startsAt: appointmentsTable.startsAt, endsAt: appointmentsTable.endsAt })
-    .from(appointmentsTable)
-    .where(and(
-      eq(appointmentsTable.salonId, salonId),
-      eq(appointmentsTable.employeeId, parseInt(employeeId)),
-      gte(appointmentsTable.startsAt, dayStart),
-      lte(appointmentsTable.startsAt, dayEnd),
-    ));
+  const existing = await db.select({
+    startsAt: appointmentsTable.startsAt,
+    endsAt: appointmentsTable.endsAt,
+  }).from(appointmentsTable).where(and(
+    eq(appointmentsTable.salonId, salonId),
+    eq(appointmentsTable.employeeId, parseInt(employeeId)),
+    gte(appointmentsTable.startsAt, dayStart),
+    lte(appointmentsTable.startsAt, dayEnd),
+  ));
 
-  const duration = service.durationMinutes;
   const slots: { time: string; available: boolean }[] = [];
+  const now = new Date();
 
   for (let hour = 8; hour < 19; hour++) {
     for (let min = 0; min < 60; min += 30) {
       const timeStr = `${String(hour).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
       const slotStart = new Date(`${date}T${timeStr}:00`);
-      const slotEnd = new Date(slotStart.getTime() + duration * 60 * 1000);
+      const slotEnd = new Date(slotStart.getTime() + totalDuration * 60 * 1000);
 
-      if (slotStart <= new Date()) continue;
+      // Não mostra horários no passado
+      if (slotStart <= now) continue;
+
+      // Não mostra slots que terminam depois das 20h
+      if (slotEnd.getHours() >= 20) continue;
 
       const conflict = existing.some(e => {
         const eStart = new Date(e.startsAt);
@@ -108,28 +118,33 @@ router.get("/booking/:salonId/slots", async (req: Request, res: Response) => {
   res.json(slots);
 });
 
-// POST /api/public/booking/:salonId/book
+// POST /api/public/booking/:salonId/book (suporta múltiplos serviços)
 router.post("/booking/:salonId/book", async (req: Request, res: Response) => {
   const salonId = parseInt(req.params.salonId);
-  const { clientName, clientPhone, clientEmail, serviceId, employeeId, date, time } = req.body as {
+  const { clientName, clientPhone, clientEmail, serviceIds, serviceId, employeeId, date, time } = req.body as {
     clientName?: string; clientPhone?: string; clientEmail?: string;
-    serviceId?: number; employeeId?: number; date?: string; time?: string;
+    serviceIds?: number[]; serviceId?: number;
+    employeeId?: number; date?: string; time?: string;
   };
 
-  if (!clientName?.trim() || !serviceId || !employeeId || !date || !time) {
+  // Suporta serviceIds (múltiplos) ou serviceId (único)
+  const ids = serviceIds?.length ? serviceIds : serviceId ? [serviceId] : [];
+
+  if (!clientName?.trim() || ids.length === 0 || !employeeId || !date || !time) {
     res.status(400).json({ error: "Dados incompletos" });
     return;
   }
 
-  const [service] = await db.select().from(servicesTable)
-    .where(and(eq(servicesTable.id, serviceId), eq(servicesTable.salonId, salonId))).limit(1);
-  if (!service) { res.status(404).json({ error: "Serviço não encontrado" }); return; }
+  const servicesList = await db.select().from(servicesTable)
+    .where(and(eq(servicesTable.salonId, salonId), inArray(servicesTable.id, ids)));
+
+  if (servicesList.length === 0) { res.status(404).json({ error: "Serviços não encontrados" }); return; }
 
   const [employee] = await db.select().from(employeesTable)
     .where(and(eq(employeesTable.id, employeeId), eq(employeesTable.salonId, salonId))).limit(1);
   if (!employee) { res.status(404).json({ error: "Profissional não encontrada" }); return; }
 
-  // Busca ou cria cliente
+  // Busca ou cria cliente pelo telefone
   let client;
   if (clientPhone?.trim()) {
     const [found] = await db.select().from(clientsTable)
@@ -148,15 +163,17 @@ router.post("/booking/:salonId/book", async (req: Request, res: Response) => {
     client = newClient;
   }
 
+  const totalDuration = servicesList.reduce((s, sv) => s + sv.durationMinutes, 0);
+  const totalPrice = servicesList.reduce((s, sv) => s + parseFloat(sv.price), 0);
   const startsAt = new Date(`${date}T${time}:00`);
-  const endsAt = new Date(startsAt.getTime() + service.durationMinutes * 60 * 1000);
+  const endsAt = new Date(startsAt.getTime() + totalDuration * 60 * 1000);
 
   // Verifica conflito
   const conflict = await db.select({ id: appointmentsTable.id }).from(appointmentsTable)
     .where(and(
       eq(appointmentsTable.salonId, salonId),
       eq(appointmentsTable.employeeId, employeeId),
-      gte(appointmentsTable.startsAt, new Date(startsAt.getTime() - service.durationMinutes * 60 * 1000 + 1)),
+      gte(appointmentsTable.startsAt, new Date(startsAt.getTime() - totalDuration * 60 * 1000 + 1)),
       lte(appointmentsTable.startsAt, endsAt),
     )).limit(1);
 
@@ -165,16 +182,20 @@ router.post("/booking/:salonId/book", async (req: Request, res: Response) => {
     return;
   }
 
-  const [appointment] = await db.insert(appointmentsTable).values({
-    salonId,
-    clientId: client.id,
-    serviceId,
-    employeeId,
-    startsAt,
-    endsAt,
-    status: "scheduled",
-    paymentStatus: "not_due",
-  }).returning();
+  // Cria um agendamento por serviço (mesma hora, sequencial)
+  let currentStart = startsAt;
+  const appointments = [];
+  for (const service of servicesList) {
+    const end = new Date(currentStart.getTime() + service.durationMinutes * 60 * 1000);
+    const [apt] = await db.insert(appointmentsTable).values({
+      salonId, clientId: client.id, serviceId: service.id, employeeId,
+      startsAt: currentStart, endsAt: end,
+      status: "scheduled", paymentStatus: "not_due",
+      paymentAmount: service.price,
+    }).returning();
+    appointments.push(apt);
+    currentStart = end;
+  }
 
   const d = startsAt.getDate().toString().padStart(2, "0");
   const m = (startsAt.getMonth() + 1).toString().padStart(2, "0");
@@ -183,12 +204,13 @@ router.post("/booking/:salonId/book", async (req: Request, res: Response) => {
   res.status(201).json({
     ok: true,
     appointment: {
-      id: appointment.id,
+      id: appointments[0].id,
       date: `${d}/${m}/${y}`,
       time,
-      serviceName: service.name,
+      services: servicesList.map(s => s.name).join(", "),
       employeeName: employee.name,
       clientName: client.name,
+      totalPrice: new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(totalPrice),
     },
   });
 });
