@@ -6,17 +6,9 @@ import { requireSalon } from "../middlewares/requireAuth";
 const router = Router();
 type AuthRequest = Request & { salonId: number };
 
-// Soma pagamentos da tabela payments + agendamentos pagos diretamente (paymentAmount)
+// Receita: usa apenas appointments com paymentStatus = paid
+// (evita duplicação com a tabela payments)
 async function calcRevenue(salonId: number, from: Date, to: Date): Promise<string> {
-  const [fromPayments] = await db
-    .select({ total: sum(paymentsTable.amount) })
-    .from(paymentsTable)
-    .where(and(
-      eq(paymentsTable.salonId, salonId),
-      gte(paymentsTable.paidAt, from),
-      lte(paymentsTable.paidAt, to),
-    ));
-
   const [fromAppointments] = await db
     .select({ total: sum(appointmentsTable.paymentAmount) })
     .from(appointmentsTable)
@@ -27,9 +19,7 @@ async function calcRevenue(salonId: number, from: Date, to: Date): Promise<strin
       lte(appointmentsTable.startsAt, to),
     ));
 
-  const a = parseFloat(fromPayments.total ?? "0");
-  const b = parseFloat(fromAppointments.total ?? "0");
-  return (a + b).toFixed(2);
+  return parseFloat(fromAppointments.total ?? "0").toFixed(2);
 }
 
 router.get("/summary", requireSalon, async (req: Request, res: Response) => {
