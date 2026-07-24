@@ -4,12 +4,12 @@ import pinoHttp from "pino-http";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import { pool as pgPool } from "@workspace/db";
-import router from "./routes";
-import { logger } from "./lib/logger";
+import router from "./routes/index.js";
+import { logger } from "./lib/logger.js";
 import path from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
-import { loadSessionFromToken } from "./middlewares/loadSessionFromToken";
+import { loadSessionFromToken } from "./middlewares/loadSessionFromToken.js";
 
 const PgSession = connectPgSimple(session);
 

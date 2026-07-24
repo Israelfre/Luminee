@@ -5,9 +5,9 @@
  * Women's Beauty Salon Management SaaS API
  * OpenAPI spec version: 0.1.0
  */
-import type { AppointmentDetailPaymentMethod } from "./appointmentDetailPaymentMethod";
-import type { AppointmentDetailPaymentStatus } from "./appointmentDetailPaymentStatus";
-import type { AppointmentDetailStatus } from "./appointmentDetailStatus";
+import type { AppointmentDetailPaymentMethod } from "./appointmentDetailPaymentMethod.js";
+import type { AppointmentDetailPaymentStatus } from "./appointmentDetailPaymentStatus.js";
+import type { AppointmentDetailStatus } from "./appointmentDetailStatus.js";
 
 export interface AppointmentDetail {
   id: number;

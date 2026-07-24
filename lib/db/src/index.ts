@@ -1,6 +1,6 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
-import * as schema from "./schema";
+import * as schema from "./schema/index.js";
 
 const { Pool } = pg;
 
@@ -92,4 +92,4 @@ export const db: ReturnType<typeof drizzle<typeof schema>> = new Proxy(
   },
 );
 
-export * from "./schema";
+export * from "./schema/index.js";

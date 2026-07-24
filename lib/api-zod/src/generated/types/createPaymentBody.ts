@@ -5,7 +5,7 @@
  * Women's Beauty Salon Management SaaS API
  * OpenAPI spec version: 0.1.0
  */
-import type { CreatePaymentBodyPaymentMethod } from "./createPaymentBodyPaymentMethod";
+import type { CreatePaymentBodyPaymentMethod } from "./createPaymentBodyPaymentMethod.js";
 
 export interface CreatePaymentBody {
   appointmentId: number;

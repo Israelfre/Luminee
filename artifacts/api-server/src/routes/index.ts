@@ -1,17 +1,17 @@
 import { Router, type IRouter } from "express";
-import healthRouter from "./health";
-import salonsRouter from "./salons";
-import clientsRouter from "./clients";
-import servicesRouter from "./services";
-import employeesRouter from "./employees";
-import appointmentsRouter from "./appointments";
-import paymentsRouter from "./payments";
-import expensesRouter from "./expenses";
-import dashboardRouter from "./dashboard";
-import reportsRouter from "./reports";
-import publicRouter from "./public";
-import adminRouter from "./admin";
-import salonAuthRouter from "./salon-auth";
+import healthRouter from "./health.js";
+import salonsRouter from "./salons.js";
+import clientsRouter from "./clients.js";
+import servicesRouter from "./services.js";
+import employeesRouter from "./employees.js";
+import appointmentsRouter from "./appointments.js";
+import paymentsRouter from "./payments.js";
+import expensesRouter from "./expenses.js";
+import dashboardRouter from "./dashboard.js";
+import reportsRouter from "./reports.js";
+import publicRouter from "./public.js";
+import adminRouter from "./admin.js";
+import salonAuthRouter from "./salon-auth.js";
 
 const router: IRouter = Router();
 

@@ -52,7 +52,13 @@ Thumbs.db
 .env
 .env.local
 .env.*.local
+env
 
 # Build artifacts (only dist folders, keep source)
 artifacts/api-server/dist
 artifacts/salon-app/dist
+
+# Generated Vercel function bundle (built by vercel-build, not source)
+artifacts/api-server/api/index.js
+artifacts/api-server/api/index.js.map
+artifacts/api-server/dist-vercel

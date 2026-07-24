@@ -21,9 +21,13 @@ function findRepoRoot(startDir: string): string {
   );
 }
 
-const here = path.dirname(fileURLToPath(import.meta.url));
-const repoRoot = findRepoRoot(here);
-const rootEnv = path.join(repoRoot, ".env");
-const apiEnv = path.join(here, "../.env");
-dotenv.config({ path: rootEnv });
-dotenv.config({ path: apiEnv, override: true });
+// Na Vercel as env vars já vêm do ambiente da função — não há `.env` nem
+// `pnpm-workspace.yaml` no filesystem da função para localizar a raiz do repo.
+if (!process.env.VERCEL) {
+  const here = path.dirname(fileURLToPath(import.meta.url));
+  const repoRoot = findRepoRoot(here);
+  const rootEnv = path.join(repoRoot, ".env");
+  const apiEnv = path.join(here, "../.env");
+  dotenv.config({ path: rootEnv });
+  dotenv.config({ path: apiEnv, override: true });
+}

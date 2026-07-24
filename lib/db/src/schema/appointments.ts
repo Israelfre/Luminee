@@ -1,10 +1,10 @@
 import { pgTable, text, serial, integer, timestamp, numeric } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
-import { salonsTable } from "./salons";
-import { clientsTable } from "./clients";
-import { servicesTable } from "./services";
-import { employeesTable } from "./employees";
+import { salonsTable } from "./salons.js";
+import { clientsTable } from "./clients.js";
+import { servicesTable } from "./services.js";
+import { employeesTable } from "./employees.js";
 
 export const appointmentsTable = pgTable("appointments", {
   id: serial("id").primaryKey(),

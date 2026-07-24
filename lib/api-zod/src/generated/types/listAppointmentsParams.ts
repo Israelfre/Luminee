@@ -5,7 +5,7 @@
  * Women's Beauty Salon Management SaaS API
  * OpenAPI spec version: 0.1.0
  */
-import type { ListAppointmentsStatus } from "./listAppointmentsStatus";
+import type { ListAppointmentsStatus } from "./listAppointmentsStatus.js";
 
 export type ListAppointmentsParams = {
   /**

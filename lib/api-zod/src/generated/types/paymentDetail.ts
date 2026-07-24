@@ -5,7 +5,7 @@
  * Women's Beauty Salon Management SaaS API
  * OpenAPI spec version: 0.1.0
  */
-import type { PaymentDetailPaymentMethod } from "./paymentDetailPaymentMethod";
+import type { PaymentDetailPaymentMethod } from "./paymentDetailPaymentMethod.js";
 
 export interface PaymentDetail {
   id: number;

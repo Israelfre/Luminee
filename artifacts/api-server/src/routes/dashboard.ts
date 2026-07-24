@@ -1,7 +1,7 @@
 import { Router, Request, Response } from "express";
 import { db, appointmentsTable, paymentsTable, clientsTable, servicesTable, employeesTable } from "@workspace/db";
 import { eq, and, gte, lte, count, sum, sql } from "drizzle-orm";
-import { requireSalon } from "../middlewares/requireAuth";
+import { requireSalon } from "../middlewares/requireAuth.js";
 
 const router = Router();
 type AuthRequest = Request & { salonId: number };

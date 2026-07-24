@@ -4,7 +4,7 @@
     "outDir": "dist",
     "types": ["node"]
   },
-  "include": ["src", "api"],
+  "include": ["src"],
   "references": [
     {
       "path": "../../lib/db"

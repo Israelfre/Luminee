@@ -5,7 +5,7 @@
  * Women's Beauty Salon Management SaaS API
  * OpenAPI spec version: 0.1.0
  */
-import type { ExpenseDetailCategory } from "./expenseDetailCategory";
+import type { ExpenseDetailCategory } from "./expenseDetailCategory.js";
 
 export interface ExpenseDetail {
   id: number;

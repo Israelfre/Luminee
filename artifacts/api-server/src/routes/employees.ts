@@ -1,7 +1,7 @@
 import { Router, Request, Response } from "express";
 import { db, employeesTable, appointmentsTable, clientsTable, servicesTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
-import { requireSalon } from "../middlewares/requireAuth";
+import { requireSalon } from "../middlewares/requireAuth.js";
 import { CreateEmployeeBody, UpdateEmployeeBody } from "@workspace/api-zod";
 
 const router = Router();

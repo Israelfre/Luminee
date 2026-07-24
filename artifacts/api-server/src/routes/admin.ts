@@ -9,7 +9,7 @@ import {
 } from "@workspace/db";
 import { eq, count } from "drizzle-orm";
 import bcrypt from "bcryptjs";
-import { requireAdmin } from "../middlewares/requireAdmin";
+import { requireAdmin } from "../middlewares/requireAdmin.js";
 
 const router = Router();
 
