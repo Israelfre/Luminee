@@ -2,12 +2,15 @@ import { defineConfig } from "drizzle-kit";
 import path from "path";
 import { fileURLToPath } from "url";
 
-// Em produção (Render), DATABASE_URL vem do ambiente diretamente.
-// Em desenvolvimento, pode vir do .env carregado pelo dotenv-cli.
-if (!process.env.DATABASE_URL) {
+// Migrations devem rodar na conexão direta do Supabase (não no pooler),
+// pois o pgbouncer em modo transaction não suporta comandos de sessão/DDL
+// usados pelo drizzle-kit. Fallback para DATABASE_URL fora do Supabase.
+const migrationUrl = process.env.DIRECT_URL || process.env.DATABASE_URL;
+
+if (!migrationUrl) {
   throw new Error(
-    "DATABASE_URL não está definida. " +
-    "Em produção: configure no painel do Render. " +
+    "DIRECT_URL (ou DATABASE_URL) não está definida. " +
+    "Em produção: configure no painel do Render/Vercel. " +
     "Em desenvolvimento: defina no .env da raiz do repositório.",
   );
 }
@@ -19,6 +22,6 @@ export default defineConfig({
   out: path.join(__dirname, "./drizzle"),
   dialect: "postgresql",
   dbCredentials: {
-    url: process.env.DATABASE_URL,
+    url: migrationUrl,
   },
 });

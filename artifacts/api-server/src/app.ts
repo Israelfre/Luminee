@@ -3,8 +3,7 @@ import cors from "cors";
 import pinoHttp from "pino-http";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
-import pg from "pg";
-import { createPgPoolConfig } from "@workspace/db";
+import { pool as pgPool } from "@workspace/db";
 import router from "./routes";
 import { logger } from "./lib/logger";
 import path from "path";
@@ -67,8 +66,6 @@ app.use(
 
 app.use(express.json({ limit: "20mb" }));
 app.use(express.urlencoded({ extended: true, limit: "20mb" }));
-
-const pgPool = new pg.Pool(createPgPoolConfig());
 
 const sessionMiddleware = session({
   store: new PgSession({

@@ -58,7 +58,13 @@ let _db: ReturnType<typeof drizzle<typeof schema>> | undefined;
 
 export function getPool(): pg.Pool {
   if (!_pool) {
-    _pool = new Pool(createPgPoolConfig());
+    const config = createPgPoolConfig();
+    if (process.env.VERCEL) {
+      config.max = 1;
+      config.idleTimeoutMillis = 10000;
+      config.connectionTimeoutMillis = 10000;
+    }
+    _pool = new Pool(config);
   }
   return _pool;
 }
@@ -73,7 +79,7 @@ export function getDb(): ReturnType<typeof drizzle<typeof schema>> {
 // Lazy proxies so existing code using `pool` and `db` directly continues to work
 export const pool: pg.Pool = new Proxy({} as pg.Pool, {
   get(_target, prop) {
-    return (getPool() as Record<string | symbol, unknown>)[prop];
+    return (getPool() as unknown as Record<string | symbol, unknown>)[prop];
   },
 });
 
@@ -81,7 +87,7 @@ export const db: ReturnType<typeof drizzle<typeof schema>> = new Proxy(
   {} as ReturnType<typeof drizzle<typeof schema>>,
   {
     get(_target, prop) {
-      return (getDb() as Record<string | symbol, unknown>)[prop];
+      return (getDb() as unknown as Record<string | symbol, unknown>)[prop];
     },
   },
 );

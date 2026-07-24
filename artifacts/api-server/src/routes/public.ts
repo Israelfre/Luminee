@@ -35,7 +35,7 @@ router.post("/salon-auth/login", async (req: Request, res: Response) => {
 
 // GET /api/public/booking/:salonId/services
 router.get("/booking/:salonId/services", async (req: Request, res: Response) => {
-  const salonId = parseInt(req.params.salonId);
+  const salonId = parseInt(req.params.salonId as string);
   const services = await db.select().from(servicesTable)
     .where(eq(servicesTable.salonId, salonId))
     .orderBy(servicesTable.name);
@@ -47,7 +47,7 @@ router.get("/booking/:salonId/services", async (req: Request, res: Response) => 
 
 // GET /api/public/booking/:salonId/employees
 router.get("/booking/:salonId/employees", async (req: Request, res: Response) => {
-  const salonId = parseInt(req.params.salonId);
+  const salonId = parseInt(req.params.salonId as string);
   const employees = await db.select().from(employeesTable)
     .where(eq(employeesTable.salonId, salonId))
     .orderBy(employeesTable.name);
@@ -58,7 +58,7 @@ router.get("/booking/:salonId/employees", async (req: Request, res: Response) =>
 
 // GET /api/public/booking/:salonId/slots?date=2026-05-21&serviceId=1&employeeId=2&duration=60
 router.get("/booking/:salonId/slots", async (req: Request, res: Response) => {
-  const salonId = parseInt(req.params.salonId);
+  const salonId = parseInt(req.params.salonId as string);
   const { date, serviceId, employeeId, duration } = req.query as {
     date: string; serviceId: string; employeeId: string; duration?: string;
   };
@@ -141,7 +141,7 @@ router.get("/booking/:salonId/slots", async (req: Request, res: Response) => {
 
 // POST /api/public/booking/:salonId/book (suporta múltiplos serviços)
 router.post("/booking/:salonId/book", async (req: Request, res: Response) => {
-  const salonId = parseInt(req.params.salonId);
+  const salonId = parseInt(req.params.salonId as string);
   const { clientName, clientPhone, clientEmail, serviceIds, serviceId, employeeId, date, time } = req.body as {
     clientName?: string; clientPhone?: string; clientEmail?: string;
     serviceIds?: number[]; serviceId?: number;

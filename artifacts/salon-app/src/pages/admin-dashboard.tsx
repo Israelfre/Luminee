@@ -5,7 +5,7 @@ import { useLocation } from "wouter";
 import {
   LogOut, Users, Plus, Link2, Pencil, Trash2, CalendarDays,
   RefreshCw, Zap, Gift, Clock, XCircle, Eye, EyeOff,
-  X, Check, Loader2, ExternalLink,
+  X, Check, Loader2, ExternalLink, Copy, ShieldAlert,
 } from "lucide-react";
 import { toast } from "sonner";
 import { API_PREFIX } from "@/lib/api-url";
@@ -17,8 +17,6 @@ interface SalonRow {
   name: string;
   email?: string;
   phone?: string;
-  password?: string | null;
-  passwordPlain?: string | null;
   logoUrl?: string;
   createdAt: string;
   clerkUserId: string | null;
@@ -59,6 +57,7 @@ function NewClientModal({ onClose, onSaved }: NewClientModalProps) {
   const [showPw, setShowPw] = useState(false);
   const [plan, setPlan] = useState<"gratuito" | "ativo">("gratuito");
   const [busy, setBusy] = useState(false);
+  const [temporaryPassword, setTemporaryPassword] = useState<string | null>(null);
 
   const save = async () => {
     if (!name.trim()) { toast.error("Nome obrigatório"); return; }
@@ -73,12 +72,50 @@ function NewClientModal({ onClose, onSaved }: NewClientModalProps) {
       if (!r.ok) throw new Error();
       toast.success("Cliente criado!");
       onSaved();
-      onClose();
+      const data = (await r.json()) as { temporaryPassword?: string | null };
+      if (data.temporaryPassword) {
+        setTemporaryPassword(data.temporaryPassword);
+      } else {
+        onClose();
+      }
     } catch { toast.error("Erro ao criar cliente"); }
     finally { setBusy(false); }
   };
 
+  const copyPassword = () => {
+    if (!temporaryPassword) return;
+    navigator.clipboard.writeText(temporaryPassword).then(() => toast.success("Senha copiada!"));
+  };
+
   const inputCls = "w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-zinc-500";
+
+  if (temporaryPassword) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
+        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+          className="bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-md p-6 shadow-2xl">
+          <div className="flex items-center gap-2 mb-2">
+            <ShieldAlert className="h-5 w-5 text-yellow-400" />
+            <h2 className="font-bold text-white text-lg">Anote a senha agora</h2>
+          </div>
+          <p className="text-zinc-400 text-xs mb-4">
+            Esta senha não poderá ser exibida novamente. Copie-a e repasse ao cliente com segurança antes de fechar esta janela.
+          </p>
+          <div className="flex items-center gap-2 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 mb-6">
+            <span className="flex-1 font-mono text-sm text-white select-all">{temporaryPassword}</span>
+            <button onClick={copyPassword} title="Copiar senha"
+              className="flex-shrink-0 p-1.5 rounded-md text-zinc-400 hover:text-white hover:bg-zinc-700 transition-all">
+              <Copy className="h-4 w-4" />
+            </button>
+          </div>
+          <button onClick={onClose}
+            className="w-full py-2 rounded-lg text-sm font-semibold bg-green-600 hover:bg-green-500 text-white flex items-center justify-center gap-2">
+            <Check className="h-4 w-4" /> Já anotei, concluir
+          </button>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
@@ -171,7 +208,6 @@ export default function AdminDashboard() {
   const [, setLocation] = useLocation();
   const [salons, setSalons] = useState<SalonRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showPw, setShowPw] = useState<Record<number, boolean>>({});
   const [newModal, setNewModal] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [planBusy, setPlanBusy] = useState<number | null>(null);
@@ -363,17 +399,6 @@ export default function AdminDashboard() {
                     </div>
                     {s.email && <p className="text-xs text-zinc-500">{s.email}</p>}
                     <div className="flex items-center gap-3">
-                      {s.passwordPlain ? (
-                        <span className="flex items-center gap-1 text-xs text-zinc-500">
-                          <span className="font-mono">{showPw[s.id] ? s.passwordPlain : "••••••••"}</span>
-                          <button onClick={() => setShowPw(p => ({ ...p, [s.id]: !p[s.id] }))}
-                            className="text-zinc-600 hover:text-zinc-400 transition-colors">
-                            {showPw[s.id] ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
-                          </button>
-                        </span>
-                      ) : (
-                        <span className="text-[10px] text-zinc-700 italic">sem senha</span>
-                      )}
                       <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-500">
                         {s.clients} cliente{s.clients !== 1 ? "s" : ""}
                       </span>

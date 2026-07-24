@@ -17,7 +17,6 @@ export const salonsTable = pgTable("salons", {
   instagram: text("instagram"),
   whatsapp: text("whatsapp"),
   password: text("password"),
-  passwordPlain: text("password_plain"),
   plan: text("plan").notNull().default("gratuito"),
   planExpiresAt: date("plan_expires_at"),
   primaryColor: text("primary_color"),
